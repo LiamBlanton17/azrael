@@ -12,8 +12,14 @@ A chess engine written in Rust.
 6x 64-bit boards for piece positions (K, Q, R, B, N, P)
 2x 64-bit boards for color positions (W, B)
 1x 64-bit for Zobrist hash of the position
-1x 6-bits for the half move counter (cannot exceed 50)
+1x 7-bits for the half move counter (cannot exceed 100)
 1x 4-bits for castling rights
-1x 4-bits for en passent square (16 possible squares)
+1x 4-bits for en passent square
 1x 1-bit for player turn
+
+With this in mind, it means the bit boards are 64-bytes, 8-bytes for Zobrist, so 72-bytes there.
+
+Then an extra byte for half move counter, two more for the castling and en passent, and 1 more for the player turn.
+
+This is a total of 76-bytes. The compiler will pad this out to 80-bytes anyway.
 
