@@ -233,6 +233,7 @@ mod tests {
         struct Test {
             fen: &'static str,
             want: Result<Position, FENErrors>,
+            description: &'static str,
         }
 
         let tests = vec![
@@ -257,11 +258,13 @@ mod tests {
                     en_passant: None,
                     turn: Color::White,
                 }),
+                description: "starting position",
             },
+            // TODO: add more tests
         ];
 
         for test in tests {
-            assert_eq!(Position::from_fen(test.fen), test.want);
+            assert_eq!(Position::from_fen(test.fen), test.want, "Failed for test: {}", test.description);
         }
 
     }
