@@ -30,3 +30,6 @@ A move, just like a board, needs to have as small as a memory footprint as possi
 6-bits for the "to square"
 2-bits for the promotion piece
 2-bits for an optional move code (is capture, castle, etc)
+
+## Move generation Design
+When generating moves for the chess engine, it will be designed explicity from the start to allow generation of captures, non-captures, or both for each piece type and the position as a whole. This can dramatically speed up the engine, as we can position not generate a large portion of moves, where a capture causes a cutoff.

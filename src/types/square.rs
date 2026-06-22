@@ -1,4 +1,3 @@
-use super::position;
 use super::bidboard::BitBoard;
 
 // Square type
