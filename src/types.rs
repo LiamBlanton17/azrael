@@ -1,4 +1,6 @@
 
 pub mod piece;
 pub mod chess_move;
-pub mod square;
+pub mod position;
+
+use position::Position;

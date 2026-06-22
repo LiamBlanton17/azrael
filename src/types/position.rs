@@ -9,11 +9,10 @@ pub type ZobristHash = u64;
 pub type Square = u8;
 
 // Enum for color
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-#[repr(bool)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Default)]
 pub enum Color {
-    White = 0,
-    Black = 1,
+    #[default] White,
+    Black,
 }
 
 // Castling right constants
@@ -23,13 +22,14 @@ pub const CASTLE_BK: u8 = 0b0100; // 4: Black Kingside
 pub const CASTLE_BQ: u8 = 0b1000; // 8: Black Queenside
 
 // Main structure for the board state
+#[derive(Default)]
 pub struct Position {
 
     // Piece bitboards
-    pub pieces: [BitBoard, 6],
+    pub pieces: [BitBoard; 6],
 
     // Color bitboards
-    pub color: [BitBoard, 2],
+    pub color: [BitBoard; 2],
 
     // Zobrist hash of the position
     pub zobrist: ZobristHash,
