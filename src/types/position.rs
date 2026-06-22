@@ -32,7 +32,7 @@ pub struct Position {
     pub castling_rights: u8,
 
     // En passant square
-    pub en_passant: square::Square,
+    pub en_passant: Option<square::Square>,
 
     // Turn tracker
     pub turn: Color,

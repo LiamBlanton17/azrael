@@ -1,5 +1,5 @@
 
-use crate::types::position::Position;
+use crate::types::position::{self, Position};
 use crate::types::color::Color;
 use crate::types::square::Square;
 use crate::types::piece::Piece;
@@ -21,48 +21,48 @@ impl Position {
         }
 
         // Create the structure
-        let mut position = Position::default();
+        let mut p = Position::default();
 
         // Split out the 5 parts we care about
-        let pieces = parts[0];
-        let color = parts[1];
-        let castling_rights = parts[2];
-        let en_passant = parts[3];
-        let half_moves = parts[4];
+        let pieces = parts[0].trim();
+        let color = parts[1].trim();
+        let castling_rights = parts[2].trim();
+        let en_passant = parts[3].trim();
+        let half_moves = parts[4].trim();
 
         // Try to parse the pieces
-        if !parse_pieces_from(&mut position, pieces) {
+        if !parse_pieces_from(&mut p, pieces) {
             return Err(FENErrors::InvalidPieces)
         }
 
         // Try to parse the color
-        if !parse_color_from(&mut position, color) {
+        if !parse_color_from(&mut p, color) {
             return Err(FENErrors::InvalidColor);
         }
 
         // Try to parse the castling rights
-        if !parse_castling_rights(&mut position, castling_rights) {
+        if !parse_castling_rights(&mut p, castling_rights) {
             return Err(FENErrors::InvalidCastlingRights);
         }
 
         // Try to parse the en passant square
-        if !parse_en_passant(&mut position, en_passant) {
+        if !parse_en_passant(&mut p, en_passant) {
             return Err(FENErrors::InvalidEnPassant);
         }
 
         // Try to parse the half moves
-        if !parse_half_moves(&mut position, half_moves) {
+        if !parse_half_moves(&mut p, half_moves) {
             return Err(FENErrors::InvalidHalfMoves);
         }
         
-        Ok(position)
+        Ok(p)
     }
 
 }
 
 // Parse out the pieces from the FEN string part
 // The string starts with the back rank and works forward
-fn parse_pieces_from(position: &mut Position, pieces: &str) -> bool {
+fn parse_pieces_from(p: &mut Position, pieces: &str) -> bool {
     let ranks: Vec<&str> = pieces.split("/").collect();
 
     // If not 8 ranks, then invalid
@@ -101,8 +101,8 @@ fn parse_pieces_from(position: &mut Position, pieces: &str) -> bool {
 
             if piece != Piece::Empty {
                 let bit_board = Square::from_row_col(row as u8, col).to_bitboard();
-                position.color[color.idx()] |= bit_board;
-                position.pieces[piece.idx()] |= bit_board;
+                p.color[color.idx()] |= bit_board;
+                p.pieces[piece.idx()] |= bit_board;
                 col += 1;
             }
         }
@@ -117,27 +117,86 @@ fn parse_pieces_from(position: &mut Position, pieces: &str) -> bool {
 }
 
 // Parse out the color from the FEN string part
-fn parse_color_from(position: &mut Position, color: &str) -> bool {
+fn parse_color_from(p: &mut Position, color: &str) -> bool {
     match color.as_bytes()[0] {
-        b'W' => position.turn = Color::White,   
-        b'B' => position.turn = Color::Black,   
+        b'W' => p.turn = Color::White,   
+        b'B' => p.turn = Color::Black,   
         _ => return false,
     }
-    
+
     true
 }
 
 // Parse out the castling rights from the FEN string part
-fn parse_castling_rights(position: &mut Position, castling_rights: &str) -> bool {
+fn parse_castling_rights(p: &mut Position, castling_rights: &str) -> bool {
+    let mut highest_seen: u8 = 0; // 1 = K, 2 = Q, 3 = k, 4 = q
+    for c in castling_rights.as_bytes() {
+        match c {
+            b'K' => {
+                if highest_seen > 0 {
+                    return false;
+                }
+                highest_seen = 1;
+                p.castling_rights |= position::CASTLE_WK;
+            },
+            b'Q' => {
+                if highest_seen > 1 {
+                    return false;
+                }
+                highest_seen = 2;
+                p.castling_rights |= position::CASTLE_WQ;
+            },
+            b'k' => {
+                if highest_seen > 2 {
+                    return false;
+                }
+                highest_seen = 3;
+                p.castling_rights |= position::CASTLE_BK;
+            },
+            b'q' => {
+                if highest_seen > 3 {
+                    return false;
+                }
+                highest_seen = 4;
+                p.castling_rights |= position::CASTLE_BQ;
+            },
+            b'-' => return highest_seen == 0,  // If '-', then that can be on the only character
+            _ => return false,
+        }
+    }
+
     true
 }
 
 // Parse out the en passant square from the FEN string part
 fn parse_en_passant(position: &mut Position, en_passant: &str) -> bool {
+    // if "-", then no en passant square
+    if en_passant == "-" {
+        position.en_passant = None;
+        return true;
+    }
+
+    // try to parse square string and make sure it is valid for en passant
+    match Square::from_str(en_passant) {
+        Some(sq) => {
+            if !sq.is_valid_enpassant_square() {
+                return false;
+            }
+
+            position.en_passant = Some(sq);
+        },
+        None => return false,
+    }
+
     true
 }
 
 // Parse out the half moves from the FEN string part
 fn parse_half_moves(position: &mut Position, half_moves: &str) -> bool {
+    match half_moves.parse::<u8>() {
+        Ok(moves) => position.half_moves = moves,
+        Err(_) => return false,
+    }
+
     true
 }
