@@ -73,6 +73,12 @@ fn parse_pieces_from(p: &mut Position, pieces: &str) -> bool {
     // Loop over the ranks updating position and checking that it is valid
     for (row, rank) in ranks.iter().enumerate() {
         let mut col: u8 = 0;
+
+        // if we ever exceed 7 columns before end of row, then illegal FEN
+        if col > 7 {
+            return false;
+        }
+
         for c in rank.chars() {
             let (piece, color) = match c {
                 'p' => (Piece::Pawn, Color::Black),
@@ -88,19 +94,14 @@ fn parse_pieces_from(p: &mut Position, pieces: &str) -> bool {
                 'k' => (Piece::King, Color::Black),
                 'K' => (Piece::King, Color::White),
                 '1'..='8' => {
-                    col += c as u8;
+                    col += c as u8 - b'0';
                     (Piece::Empty, Color::White)
                 },
                 _ => return false,
             };
-            
-            // if we ever exceed 8 columns, then illegal FEN
-            if col > 7 {
-                return false;
-            }
 
             if piece != Piece::Empty {
-                let bit_board = Square::from_row_col(row as u8, col).to_bitboard();
+                let bit_board = Square::from_row_col((7 - row) as u8, col).to_bitboard();
                 p.color[color.idx()] |= bit_board;
                 p.pieces[piece.idx()] |= bit_board;
                 col += 1;
@@ -108,7 +109,7 @@ fn parse_pieces_from(p: &mut Position, pieces: &str) -> bool {
         }
 
         // if not equal to 8 columns at end of row, then illegal FEN
-        if col != 8 {
+        if col == 8 {
             return false;
         }
     }
@@ -118,9 +119,14 @@ fn parse_pieces_from(p: &mut Position, pieces: &str) -> bool {
 
 // Parse out the color from the FEN string part
 fn parse_color_from(p: &mut Position, color: &str) -> bool {
-    match color.as_bytes()[0] {
-        b'W' => p.turn = Color::White,   
-        b'B' => p.turn = Color::Black,   
+    let c_bytes = color.as_bytes();
+    if c_bytes.len() != 1 {
+        return false;
+    }
+
+    match c_bytes[0] {
+        b'w' => p.turn = Color::White,   
+        b'b' => p.turn = Color::Black,   
         _ => return false,
     }
 
@@ -160,12 +166,18 @@ fn parse_castling_rights(p: &mut Position, castling_rights: &str) -> bool {
                 highest_seen = 4;
                 p.castling_rights |= position::CASTLE_BQ;
             },
-            b'-' => return highest_seen == 0,  // If '-', then that can be on the only character
+            b'-' => {
+                if highest_seen != 0 {
+                    return false;
+                }
+                highest_seen = 5;
+            }
             _ => return false,
         }
     }
 
-    true
+    // requiring string to not be empty
+    highest_seen > 0 
 }
 
 // Parse out the en passant square from the FEN string part
@@ -193,8 +205,14 @@ fn parse_en_passant(position: &mut Position, en_passant: &str) -> bool {
 
 // Parse out the half moves from the FEN string part
 fn parse_half_moves(position: &mut Position, half_moves: &str) -> bool {
-    match half_moves.parse::<u8>() {
-        Ok(moves) => position.half_moves = moves,
+    match half_moves.parse::<i32>() {
+        Ok(moves) => {
+            // Half moves must be within the double 75-rule and positive
+            if moves > 150 || moves < 0 {
+                return false;
+            } 
+            position.half_moves = moves as u8;
+        },
         Err(_) => return false,
     }
 
