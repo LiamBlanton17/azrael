@@ -3,6 +3,7 @@ use crate::types::position::{self, Position};
 use crate::types::color::Color;
 use crate::types::square::Square;
 use crate::types::piece::Piece;
+use crate::types::bidboard::BitBoard;
 use super::errors::FENErrors;
 
 impl Position {
@@ -223,10 +224,45 @@ fn parse_half_moves(position: &mut Position, half_moves: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
-    
+
     #[test]
     fn test_from_fen() {
+
+        struct Test {
+            fen: &'static str,
+            want: Result<Position, FENErrors>,
+        }
+
+        let tests = vec![
+            Test {
+                fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+                want: Ok(Position {
+                    pieces: [
+                        BitBoard(0x4200000000000042), // Knights
+                        BitBoard(0x2400000000000024), // Bishops
+                        BitBoard(0x8100000000000081), // Rooks
+                        BitBoard(0x0800000000000008), // Queens
+                        BitBoard(0x1000000000000010), // Kings
+                        BitBoard(0x00FF00000000FF00), // Pawns
+                    ],
+                    color: [
+                        BitBoard(0x000000000000FFFF), // White
+                        BitBoard(0xFFFF000000000000), // Black
+                    ],
+                    zobrist: 0,
+                    half_moves: 0,
+                    castling_rights: 0b1111,
+                    en_passant: None,
+                    turn: Color::White,
+                }),
+            },
+        ];
+
+        for test in tests {
+            assert_eq!(Position::from_fen(test.fen), test.want);
+        }
 
     }
 

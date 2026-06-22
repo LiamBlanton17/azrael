@@ -2,7 +2,7 @@ use super::position;
 use super::bidboard::BitBoard;
 
 // Square type
-#[derive(Default, Clone, Copy)]
+#[derive(Default, Clone, Copy, PartialEq, Debug)]
 pub struct Square(pub u8);
 
 impl Square {

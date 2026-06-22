@@ -1,7 +1,7 @@
 use std::ops::BitOrAssign;
 
 // Type Bit board
-#[derive(Default, Clone, Copy)]
+#[derive(Default, Clone, Copy, PartialEq, Debug)]
 pub struct BitBoard(pub u64);
 
 impl BitOrAssign for BitBoard {

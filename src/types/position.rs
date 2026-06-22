@@ -8,12 +8,12 @@ pub type ZobristHash = u64;
 
 // Castling right constants
 pub const CASTLE_WK: u8 = 0b0001; // 1: White Kingside
-pub const CASTLE_WQ: u8 = 0b0100; // 2: White Queenside
+pub const CASTLE_WQ: u8 = 0b0010; // 2: White Queenside
 pub const CASTLE_BK: u8 = 0b0100; // 4: Black Kingside
 pub const CASTLE_BQ: u8 = 0b1000; // 8: Black Queenside
 
 // Main structure for the board state
-#[derive(Default)]
+#[derive(Default, PartialEq, Debug)]
 pub struct Position {
 
     // Piece bitboards
