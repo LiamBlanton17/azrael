@@ -74,12 +74,13 @@ fn parse_pieces_from(p: &mut Position, pieces: &str) -> bool {
     for (row, rank) in ranks.iter().enumerate() {
         let mut col: u8 = 0;
 
-        // if we ever exceed 7 columns before end of row, then illegal FEN
-        if col > 7 {
-            return false;
-        }
-
         for c in rank.chars() {
+            // if we ever exceed 7 columns before end of row, then illegal FEN
+            if col > 7 {
+                return false;
+            }
+
+            // match the current character
             let (piece, color) = match c {
                 'p' => (Piece::Pawn, Color::Black),
                 'P' => (Piece::Pawn, Color::White),
@@ -100,6 +101,7 @@ fn parse_pieces_from(p: &mut Position, pieces: &str) -> bool {
                 _ => return false,
             };
 
+            // if piece is found, update the board
             if piece != Piece::Empty {
                 let bit_board = Square::from_row_col((7 - row) as u8, col).to_bitboard();
                 p.color[color.idx()] |= bit_board;
@@ -109,7 +111,7 @@ fn parse_pieces_from(p: &mut Position, pieces: &str) -> bool {
         }
 
         // if not equal to 8 columns at end of row, then illegal FEN
-        if col == 8 {
+        if col != 8 {
             return false;
         }
     }
