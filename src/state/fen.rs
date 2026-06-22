@@ -220,3 +220,14 @@ fn parse_half_moves(position: &mut Position, half_moves: &str) -> bool {
 
     true
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    #[test]
+    fn test_from_fen() {
+
+    }
+
+}
