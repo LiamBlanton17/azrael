@@ -23,3 +23,10 @@ Then an extra byte for half move counter, two more for the castling and en passe
 
 This is a total of 76-bytes. The compiler will pad this out to 80-bytes anyway.
 
+## Move Design
+A move, just like a board, needs to have as small as a memory footprint as possible. The move structure will be 2 bytes.
+
+6-bits for the "from square"
+6-bits for the "to square"
+2-bits for the promotion piece
+2-bits for an optional move code (is capture, castle, etc)
