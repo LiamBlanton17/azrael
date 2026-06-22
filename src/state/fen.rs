@@ -1,5 +1,8 @@
 
 use crate::types::position::Position;
+use crate::types::color::Color;
+use crate::types::square::Square;
+use crate::types::piece::Piece;
 use super::errors::FENErrors;
 
 impl Position {
@@ -58,26 +61,83 @@ impl Position {
 }
 
 // Parse out the pieces from the FEN string part
+// The string starts with the back rank and works forward
 fn parse_pieces_from(position: &mut Position, pieces: &str) -> bool {
-    return false;
+    let ranks: Vec<&str> = pieces.split("/").collect();
+
+    // If not 8 ranks, then invalid
+    if ranks.len() != 8 {
+        return false;
+    }
+
+    // Loop over the ranks updating position and checking that it is valid
+    for (row, rank) in ranks.iter().enumerate() {
+        let mut col: u8 = 0;
+        for c in rank.chars() {
+            let (piece, color) = match c {
+                'p' => (Piece::Pawn, Color::Black),
+                'P' => (Piece::Pawn, Color::White),
+                'n' => (Piece::Knight, Color::Black),
+                'N' => (Piece::Knight, Color::White),
+                'b' => (Piece::Bishop, Color::Black),
+                'B' => (Piece::Bishop, Color::White),
+                'r' => (Piece::Rook, Color::Black),
+                'R' => (Piece::Rook, Color::White),
+                'q' => (Piece::Queen, Color::Black),
+                'Q' => (Piece::Queen, Color::White),
+                'k' => (Piece::King, Color::Black),
+                'K' => (Piece::King, Color::White),
+                '1'..='8' => {
+                    col += c as u8;
+                    (Piece::Empty, Color::White)
+                },
+                _ => return false,
+            };
+            
+            // if we ever exceed 8 columns, then illegal FEN
+            if col > 7 {
+                return false;
+            }
+
+            if piece != Piece::Empty {
+                let bit_board = Square::from_row_col(row as u8, col).to_bitboard();
+                position.color[color.idx()] |= bit_board;
+                position.pieces[piece.idx()] |= bit_board;
+                col += 1;
+            }
+        }
+
+        // if not equal to 8 columns at end of row, then illegal FEN
+        if col != 8 {
+            return false;
+        }
+    }
+
+    true
 }
 
 // Parse out the color from the FEN string part
 fn parse_color_from(position: &mut Position, color: &str) -> bool {
-    return false;
+    match color.as_bytes()[0] {
+        b'W' => position.turn = Color::White,   
+        b'B' => position.turn = Color::Black,   
+        _ => return false,
+    }
+    
+    true
 }
 
 // Parse out the castling rights from the FEN string part
 fn parse_castling_rights(position: &mut Position, castling_rights: &str) -> bool {
-    return false;
+    true
 }
 
 // Parse out the en passant square from the FEN string part
 fn parse_en_passant(position: &mut Position, en_passant: &str) -> bool {
-    return false;
+    true
 }
 
 // Parse out the half moves from the FEN string part
 fn parse_half_moves(position: &mut Position, half_moves: &str) -> bool {
-    return false;
+    true
 }

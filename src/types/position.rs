@@ -1,19 +1,10 @@
 
-// Type aliasing u64 to bit boards
-pub type BitBoard = u64;
+use super::bidboard::BitBoard;
+use super::color::Color;
+use super::square;
 
 // Type aliasing u64 to Zobrist hash
 pub type ZobristHash = u64;
-
-// Square type aliasing
-pub type Square = u8;
-
-// Enum for color
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Default)]
-pub enum Color {
-    #[default] White,
-    Black,
-}
 
 // Castling right constants
 pub const CASTLE_WK: u8 = 0b0001; // 1: White Kingside
@@ -41,7 +32,7 @@ pub struct Position {
     pub castling_rights: u8,
 
     // En passant square
-    pub en_passant: u8,
+    pub en_passant: square::Square,
 
     // Turn tracker
     pub turn: Color,

@@ -9,4 +9,12 @@ pub enum Piece {
     Queen = 3,
     King = 4,
     Pawn = 5,
+    Empty = 6,
+}
+
+impl Piece {
+    #[inline]
+    pub fn idx(&self) -> usize {
+        *self as usize
+    }
 }
