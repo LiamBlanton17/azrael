@@ -1,3 +1,4 @@
+use std::ops::Not;
 
 // Enum for color
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Default)]
@@ -10,5 +11,16 @@ impl Color {
     #[inline]
     pub fn idx(&self) -> usize {
         *self as usize
+    }
+}
+
+impl Not for Color {
+    type Output = Color;
+    
+    fn not(self) -> Color {
+        match self {
+            Color::White => Color::Black,
+            Color::Black => Color::White,
+        }
     }
 }
