@@ -55,7 +55,7 @@ pub fn push_move(move_stack: &mut Vec<chess_move::Move>, to: Square, from: Squar
 
 // Define helper function to push pawn moves
 #[inline]
-fn push_pawn_move(move_stack: &mut Vec<chess_move::Move>, to: Square, offset: u8, turn: color::Color) {
+fn push_pawn_move(move_stack: &mut Vec<chess_move::Move>, to: Square, flag: Move, offset: u8, turn: color::Color) {
     let (from, is_promotion) =  if turn == color::Color::White { 
         ((to - offset), to > Square(56)) // on black's final rank
     } else { 
@@ -63,11 +63,11 @@ fn push_pawn_move(move_stack: &mut Vec<chess_move::Move>, to: Square, offset: u8
     };
     
     if !is_promotion {
-        push_move(move_stack, to, from, chess_move::MOVE_FLAG_CAPTURE, Piece::Empty);
+        push_move(move_stack, to, from, flag, Piece::Empty);
     } else {
-        push_move(move_stack, to, from, chess_move::MOVE_FLAG_CAPTURE, piece::Piece::Knight);
-        push_move(move_stack, to, from, chess_move::MOVE_FLAG_CAPTURE, piece::Piece::Bishop);
-        push_move(move_stack, to, from, chess_move::MOVE_FLAG_CAPTURE, piece::Piece::Rook);
-        push_move(move_stack, to, from, chess_move::MOVE_FLAG_CAPTURE, piece::Piece::Queen);
+        push_move(move_stack, to, from, flag, piece::Piece::Knight);
+        push_move(move_stack, to, from, flag, piece::Piece::Bishop);
+        push_move(move_stack, to, from, flag, piece::Piece::Rook);
+        push_move(move_stack, to, from, flag, piece::Piece::Queen);
     }
 }

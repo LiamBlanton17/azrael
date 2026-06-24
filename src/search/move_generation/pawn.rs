@@ -47,12 +47,12 @@ pub fn generate_pawn_captures(p: &Position, move_stack: &mut Vec<chess_move::Mov
 
     // For each right attack, push it to the move stack
     for to in right_attacks {
-        push_pawn_move(move_stack, to, 9, p.turn); // offset 9 means shift bitboard 9
+        push_pawn_move(move_stack, to, chess_move::MOVE_FLAG_CAPTURE, 9, p.turn); // offset 9 means shift bitboard 9
     }
 
     // For each left attack, push it to the move stack
     for to in left_attacks {
-        push_pawn_move(move_stack, to, 7, p.turn); // offset 7 means shift bitboard 7
+        push_pawn_move(move_stack, to, chess_move::MOVE_FLAG_CAPTURE, 7, p.turn); // offset 7 means shift bitboard 7
     }
 
 }
@@ -77,12 +77,12 @@ pub fn generate_pawn_quiets(p: &Position, move_stack: &mut Vec<chess_move::Move>
 
     // For each single push add a move
     for to in single_pushes {
-        push_pawn_move(move_stack, to, 8, p.turn);
+        push_pawn_move(move_stack, to, chess_move::MOVE_FLAG_NONE, 8, p.turn);
     }
 
     // For each double push add a move
     for to in double_pushes {
-        push_pawn_move(move_stack, to, 16, p.turn);
+        push_pawn_move(move_stack, to, chess_move::MOVE_FLAG_NONE, 16, p.turn);
     }
 
 }

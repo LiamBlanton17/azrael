@@ -1,3 +1,5 @@
+use crate::search::move_generation::push_move;
+use crate::types::bidboard::BitBoard;
 use crate::types::piece::Piece;
 use crate::types::position::Position;
 use crate::types::chess_move;
@@ -19,12 +21,53 @@ impl Position {
 
 }
 
+const NOT_A_FILE: BitBoard = BitBoard(0x7F7F7F7F7F7F7F7F);
+const NOT_H_FILE: BitBoard = BitBoard(0xFEFEFEFEFEFEFEFE);
+
 pub fn generate_king_captures(p: &Position, move_stack: &mut Vec<chess_move::Move>) {
     let king = p.get_friendly_piece(Piece::King);
+    let king_sq = king.return_lsb_as_square();
     let enemy = p.get_enemy_pieces();
+
+    // TODO: precompute this and look it up for both captures and quiets
+    let attacks = enemy & (
+        (king << 8) |                   // north
+        (king >> 8) |                   // south
+        ((king << 1) & NOT_H_FILE) |    // east
+        ((king >> 1) & NOT_A_FILE) |    // west
+        ((king << 9) & NOT_H_FILE) |    // north-east
+        ((king << 7) & NOT_A_FILE) |    // north-west
+        ((king >> 7) & NOT_H_FILE) |    // south-east
+        ((king >> 9) & NOT_A_FILE)      // south-west
+    );
+
+    // Add all the attacks to the move stack
+    for to in attacks {
+        push_move(move_stack, to, king_sq, chess_move::MOVE_FLAG_CAPTURE, Piece::Empty);
+    }
+
 }
 
 pub fn generate_king_quiets(p: &Position, move_stack: &mut Vec<chess_move::Move>) {
     let king = p.get_friendly_piece(Piece::King);
+    let king_sq = king.return_lsb_as_square();
     let pieces = p.get_all_pieces();
+
+    // TODO: precompute this and look it up for both captures and quiets
+    let moves = !pieces & (
+        (king << 8) |                   // north
+        (king >> 8) |                   // south
+        ((king << 1) & NOT_H_FILE) |    // east
+        ((king >> 1) & NOT_A_FILE) |    // west
+        ((king << 9) & NOT_H_FILE) |    // north-east
+        ((king << 7) & NOT_A_FILE) |    // north-west
+        ((king >> 7) & NOT_H_FILE) |    // south-east
+        ((king >> 9) & NOT_A_FILE)      // south-west
+    );
+
+    // Add all the moves to the move stack
+    for to in moves {
+        push_move(move_stack, to, king_sq, chess_move::MOVE_FLAG_NONE, Piece::Empty);
+    }
+
 }

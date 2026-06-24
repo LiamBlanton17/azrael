@@ -13,6 +13,11 @@ impl BitBoard {
         self.0 &= self.0 - 1;
         sq
     }
+
+    #[inline]
+    pub fn return_lsb_as_square(&self) -> Square {
+        Square(self.0.trailing_zeros() as u8)
+    }
 }
 
 impl BitOrAssign for BitBoard {
