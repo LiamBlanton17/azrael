@@ -1,9 +1,8 @@
 use crate::search::move_generation::push_pawn_move;
 use crate::types::bidboard::BitBoard;
-use crate::types::{chess_move, piece};
+use crate::types::chess_move;
 use crate::types::piece::Piece;
 use crate::types::position::Position;
-use crate::types::square::Square;
 use crate::types::color;
 use super::MoveGenLevel;
 
@@ -31,9 +30,9 @@ const RANK_7: BitBoard = BitBoard(0x00FF000000000000);
 
 pub fn generate_pawn_captures(p: &Position, move_stack: &mut Vec<chess_move::Move>) {
 
-    // Get the bitboards for the players pawns and all enemy pieces
-    let pawns = p.pieces[Piece::Pawn.idx()] & p.color[p.turn.idx()];
-    let enemy = p.color[(!p.turn).idx()];
+    // Get the bitboards for the players pawns and all enemy pieces (plus en passant square if exists)
+    let pawns = p.get_friendly_piece(Piece::Pawn);
+    let enemy = p.get_enemy_pieces() | p.en_passant.map_or(BitBoard(0), |sq| sq.to_bitboard());
 
     // Get the possible attacks depending on color
     let (possible_left_attacks, possible_right_attacks) = if p.turn == color::Color::White {
@@ -60,8 +59,8 @@ pub fn generate_pawn_captures(p: &Position, move_stack: &mut Vec<chess_move::Mov
 
 pub fn generate_pawn_quiets(p: &Position, move_stack: &mut Vec<chess_move::Move>) {
     // Get the bitboards for the players pawns and all pieces
-    let pawns = p.pieces[Piece::Pawn.idx()] & p.color[p.turn.idx()];
-    let pieces = p.color[color::Color::White.idx()] | p.color[color::Color::Black.idx()];
+    let pawns = p.get_friendly_piece(Piece::Pawn);
+    let pieces = p.get_all_pieces();
 
     // Generate the single and double rank pushes
     // Single push if no piece in front
