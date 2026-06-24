@@ -1,7 +1,7 @@
 use super::bidboard::BitBoard;
 
 // Square type
-#[derive(Default, Clone, Copy, PartialEq, Debug)]
+#[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub struct Square(pub u8);
 
 impl Square {
@@ -46,5 +46,21 @@ impl Square {
     #[inline]
     pub fn to_bitboard(&self) -> BitBoard {
         BitBoard(1u64 << self.0)
+    }
+}
+
+impl std::ops::Sub<u8> for Square {
+    type Output = Square;
+
+    fn sub(self, rhs: u8) -> Square {
+        Square(self.0 - rhs)
+    }
+}
+
+impl std::ops::Add<u8> for Square {
+    type Output = Square;
+
+    fn add(self, rhs: u8) -> Square {
+        Square(self.0 + rhs)
     }
 }
