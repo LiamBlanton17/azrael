@@ -3,6 +3,7 @@ use crate::types::bidboard::BitBoard;
 use crate::types::piece::Piece;
 use crate::types::position::Position;
 use crate::types::chess_move;
+use crate::types::square;
 use super::MoveGenLevel;
 
 impl Position {
@@ -68,6 +69,14 @@ pub fn generate_king_quiets(p: &Position, move_stack: &mut Vec<chess_move::Move>
     // Add all the moves to the move stack
     for to in moves {
         push_move(move_stack, to, king_sq, chess_move::MOVE_FLAG_NONE, Piece::Empty);
+    }
+
+    // Add castling moves if possible
+    if p.can_castle_kingside() {
+        push_move(move_stack, square::G1, king_sq, chess_move::MOVE_FLAG_CASTLE, Piece::Empty);
+    }
+    if p.can_castle_queenside() {
+        push_move(move_stack, square::G1, king_sq, chess_move::MOVE_FLAG_CASTLE, Piece::Empty);
     }
 
 }

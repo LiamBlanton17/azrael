@@ -4,6 +4,11 @@ use super::bidboard::BitBoard;
 #[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub struct Square(pub u8);
 
+pub const C1: Square = Square(2);
+pub const G1: Square = Square(6);
+pub const C8: Square = Square(58);
+pub const G8: Square = Square(62);
+
 impl Square {
     #[inline]
     pub fn from_row_col(row: u8, col: u8) -> Self {
@@ -47,6 +52,7 @@ impl Square {
     pub fn to_bitboard(&self) -> BitBoard {
         BitBoard(1u64 << self.0)
     }
+
 }
 
 impl std::ops::Sub<u8> for Square {
