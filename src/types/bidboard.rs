@@ -15,7 +15,7 @@ impl BitBoard {
     }
 
     #[inline]
-    pub fn return_lsb_as_square(&self) -> Square {
+    pub fn lsb_as_square(&self) -> Square {
         Square(self.0.trailing_zeros() as u8)
     }
 }
@@ -65,6 +65,18 @@ impl Not for BitBoard {
 
     fn not(self) -> BitBoard {
         BitBoard(!self.0)
+    }
+}
+
+impl std::ops::ShlAssign<u32> for BitBoard {
+    fn shl_assign(&mut self, rhs: u32) {
+        self.0 <<= rhs;
+    }
+}
+
+impl std::ops::ShrAssign<u32> for BitBoard {
+    fn shr_assign(&mut self, rhs: u32) {
+        self.0 >>= rhs;
     }
 }
 

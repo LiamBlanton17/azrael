@@ -6,6 +6,7 @@ mod rook;
 mod queen;
 mod king;
 
+use crate::types::bidboard::BitBoard;
 use crate::types::{color, piece};
 use crate::types::piece::Piece;
 use crate::types::position::Position;
@@ -69,5 +70,25 @@ fn push_pawn_move(move_stack: &mut Vec<chess_move::Move>, to: Square, flag: Move
         push_move(move_stack, to, from, flag, piece::Piece::Bishop);
         push_move(move_stack, to, from, flag, piece::Piece::Rook);
         push_move(move_stack, to, from, flag, piece::Piece::Queen);
+    }
+}
+
+// Define helper function to generate ray moves
+// TODO: refactor to use magic bitboards instead
+fn generate_ray_moves(shift: i8, sq: Square, friendly: BitBoard, enemy: BitBoard, level: MoveGenLevel, move_stack: &mut Vec<chess_move::Move>) {
+    let apply_shift = |bb| if shift >= 0 { bb << (shift as u32) } else { bb >> ((-shift) as u32) };
+
+    let mut current_bb = apply_shift(sq.to_bitboard());
+    while current_bb & friendly != BitBoard(0) {
+        if current_bb & enemy != BitBoard(0) {
+            if level == MoveGenLevel::Captures || level == MoveGenLevel::All {
+                push_move(move_stack, current_bb.lsb_as_square(), sq, chess_move::MOVE_FLAG_CAPTURE, Piece::Empty);
+            }
+            break;
+        }
+        if level == MoveGenLevel::Quiets || level == MoveGenLevel::All {
+            push_move(move_stack, current_bb.lsb_as_square(), sq, chess_move::MOVE_FLAG_NONE, Piece::Empty);
+        }
+        current_bb = apply_shift(current_bb);
     }
 }

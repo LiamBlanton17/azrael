@@ -8,6 +8,11 @@ impl Position {
     }
 
     #[inline]
+    pub fn get_friendly_pieces(&self) -> BitBoard {
+        self.color[self.turn.idx()]
+    }
+
+    #[inline]
     pub fn get_all_pieces(&self) -> BitBoard {
         self.color[Color::White.idx()] | self.color[Color::Black.idx()]
     }

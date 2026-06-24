@@ -27,7 +27,7 @@ const NOT_H_FILE: BitBoard = BitBoard(0xFEFEFEFEFEFEFEFE);
 
 pub fn generate_king_captures(p: &Position, move_stack: &mut Vec<chess_move::Move>) {
     let king = p.get_friendly_piece(Piece::King);
-    let king_sq = king.return_lsb_as_square();
+    let king_sq = king.lsb_as_square();
     let enemy = p.get_enemy_pieces();
 
     // TODO: precompute this and look it up for both captures and quiets
@@ -51,7 +51,7 @@ pub fn generate_king_captures(p: &Position, move_stack: &mut Vec<chess_move::Mov
 
 pub fn generate_king_quiets(p: &Position, move_stack: &mut Vec<chess_move::Move>) {
     let king = p.get_friendly_piece(Piece::King);
-    let king_sq = king.return_lsb_as_square();
+    let king_sq = king.lsb_as_square();
     let pieces = p.get_all_pieces();
 
     // TODO: precompute this and look it up for both captures and quiets
