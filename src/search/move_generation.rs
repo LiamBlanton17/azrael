@@ -43,8 +43,14 @@ impl Position {
 
 }
 
-pub fn push_move(move_stack: &mut Vec<chess_move::Move>, to: Square, from: Square, flag: Move, promotion: Option<Piece>) {
-    
+#[inline]
+pub fn push_move(move_stack: &mut Vec<chess_move::Move>, to: Square, from: Square, flag: chess_move::Move, promotion: Piece) {
+    move_stack.push(
+        (to.0 as u16) |
+        ((from.0 as u16) << chess_move::ORIGIN_SHIFT) |
+        ((promotion as u16) << chess_move::PROMOT_SHIFT) |
+        (flag << chess_move::FLAG_SHIFT)
+    );
 }
 
 // Define helper function to push pawn moves
@@ -57,11 +63,11 @@ fn push_pawn_move(move_stack: &mut Vec<chess_move::Move>, to: Square, offset: u8
     };
     
     if !is_promotion {
-        push_move(move_stack, to, from, chess_move::MOVE_FLAG_CAPTURE, None);
+        push_move(move_stack, to, from, chess_move::MOVE_FLAG_CAPTURE, Piece::Empty);
     } else {
-        push_move(move_stack, to, from, chess_move::MOVE_FLAG_CAPTURE, Some(piece::Piece::Knight));
-        push_move(move_stack, to, from, chess_move::MOVE_FLAG_CAPTURE, Some(piece::Piece::Bishop));
-        push_move(move_stack, to, from, chess_move::MOVE_FLAG_CAPTURE, Some(piece::Piece::Rook));
-        push_move(move_stack, to, from, chess_move::MOVE_FLAG_CAPTURE, Some(piece::Piece::Queen));
+        push_move(move_stack, to, from, chess_move::MOVE_FLAG_CAPTURE, piece::Piece::Knight);
+        push_move(move_stack, to, from, chess_move::MOVE_FLAG_CAPTURE, piece::Piece::Bishop);
+        push_move(move_stack, to, from, chess_move::MOVE_FLAG_CAPTURE, piece::Piece::Rook);
+        push_move(move_stack, to, from, chess_move::MOVE_FLAG_CAPTURE, piece::Piece::Queen);
     }
 }
