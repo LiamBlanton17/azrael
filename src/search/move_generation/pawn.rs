@@ -3,7 +3,8 @@ use crate::types::bidboard::BitBoard;
 use crate::types::chess_move;
 use crate::types::piece::Piece;
 use crate::types::position::Position;
-use crate::types::color;
+use crate::types::color::{self, Color};
+use crate::types::square::Square;
 use super::MoveGenLevel;
 
 impl Position {
@@ -20,6 +21,22 @@ impl Position {
         }
     }
 
+    // Returns true if pawn for the color given can capture the square give
+    pub fn is_square_underattack_by_pawn(&self, sq: Square, c: Color) -> bool {
+        // Get the bitboards for the pawns
+        let pawns: BitBoard = self.get_piece(Piece::Pawn, c);
+
+        // Get the attacks depending on color
+        let attacks= if c == color::Color::White {
+            ((pawns & NOT_H_FILE) << 9u32) | ((pawns & NOT_A_FILE) << 7u32)
+        } else {
+            ((pawns & NOT_H_FILE) >> 9u32) | ((pawns & NOT_A_FILE) >> 7u32)
+        };
+
+        // Check if any attack can see the square
+        attacks & sq.to_bitboard() != BitBoard(0)
+    }
+
 }
 
 const NOT_A_FILE: BitBoard = BitBoard(0x7F7F7F7F7F7F7F7F);
@@ -28,7 +45,7 @@ const NOT_H_FILE: BitBoard = BitBoard(0xFEFEFEFEFEFEFEFE);
 const RANK_2: BitBoard = BitBoard(0x000000000000FF00);
 const RANK_7: BitBoard = BitBoard(0x00FF000000000000); 
 
-pub fn generate_pawn_captures(p: &Position, move_stack: &mut Vec<chess_move::Move>) {
+fn generate_pawn_captures(p: &Position, move_stack: &mut Vec<chess_move::Move>) {
 
     // Get the bitboards for the players pawns and all enemy pieces (plus en passant square if exists)
     let pawns = p.get_friendly_piece(Piece::Pawn);
@@ -57,7 +74,7 @@ pub fn generate_pawn_captures(p: &Position, move_stack: &mut Vec<chess_move::Mov
 
 }
 
-pub fn generate_pawn_quiets(p: &Position, move_stack: &mut Vec<chess_move::Move>) {
+fn generate_pawn_quiets(p: &Position, move_stack: &mut Vec<chess_move::Move>) {
     // Get the bitboards for the players pawns and all pieces
     let pawns = p.get_friendly_piece(Piece::Pawn);
     let pieces = p.get_all_pieces();

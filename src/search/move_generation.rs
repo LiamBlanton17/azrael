@@ -32,7 +32,7 @@ impl Position {
     }
 
     // Public function to call to generate moves for a position
-    pub fn generate_moves(&self, move_stack: &mut Vec<chess_move::Move>, level: MoveGenLevel) {
+    pub fn generate_moves(&mut self, move_stack: &mut Vec<chess_move::Move>, level: MoveGenLevel) {
         move_stack.clear();
         self.generate_pawn_moves(move_stack, level);
         self.generate_knight_moves(move_stack, level);
@@ -79,7 +79,7 @@ fn generate_ray_moves(shift: i8, sq: Square, friendly: BitBoard, enemy: BitBoard
     let apply_shift = |bb| if shift >= 0 { bb << (shift as u32) } else { bb >> ((-shift) as u32) };
 
     let mut current_bb = apply_shift(sq.to_bitboard());
-    while current_bb & friendly != BitBoard(0) {
+    while current_bb != BitBoard(0) && current_bb & friendly == BitBoard(0) {
         if current_bb & enemy != BitBoard(0) {
             if level == MoveGenLevel::Captures || level == MoveGenLevel::All {
                 push_move(move_stack, current_bb.lsb_as_square(), sq, chess_move::MOVE_FLAG_CAPTURE, Piece::Empty);
@@ -91,4 +91,24 @@ fn generate_ray_moves(shift: i8, sq: Square, friendly: BitBoard, enemy: BitBoard
         }
         current_bb = apply_shift(current_bb);
     }
+}
+
+// Define helper function to see if a ray moving piece can attack a square
+// TODO: refactor to use magic bitboards instead
+fn ray_can_attack_sq(shift: i8, start: Square, target: Square, friendly: BitBoard, enemy: BitBoard) -> bool {
+    let apply_shift = |bb| if shift >= 0 { bb << (shift as u32) } else { bb >> ((-shift) as u32) };
+
+    let target_bb = target.to_bitboard();
+    let mut current_bb = apply_shift(start.to_bitboard());
+    while current_bb != BitBoard(0) && current_bb & friendly == BitBoard(0) {
+        if current_bb & target_bb != BitBoard(0) {
+            return true;
+        }
+        if current_bb & enemy != BitBoard(0) {
+            return false;
+        }
+        current_bb = apply_shift(current_bb);
+    }
+
+    false
 }
