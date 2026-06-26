@@ -33,7 +33,7 @@ impl Position {
     }
 
     #[inline]
-    pub fn is_square_underattack(&mut self, sq: Square) -> bool {
+    pub fn is_square_underattack(&self, sq: Square) -> bool {
         let c = !self.turn;
         if self.is_square_underattack_by_pawn(sq, c) { return true; }
         if self.is_square_underattack_by_knight(sq, c) { return true; }
@@ -45,7 +45,7 @@ impl Position {
     }
 
     #[inline]
-    pub fn can_castle_kingside(&mut self) -> bool {
+    pub fn can_castle_kingside(&self) -> bool {
         // The search loop will make sure king is not in check at G1/G8, so no need for under attack check
         (
             self.turn == Color::White 
@@ -65,7 +65,7 @@ impl Position {
     }
 
     #[inline]
-    pub fn can_castle_queenside(&mut self) -> bool {
+    pub fn can_castle_queenside(&self) -> bool {
         // The search loop will make sure king is not in check at C1/C8, so no need for under attack check
         (
             self.turn == Color::White 

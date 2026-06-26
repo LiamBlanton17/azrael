@@ -11,7 +11,7 @@ use super::MoveGenLevel;
 impl Position {
 
     // Returns pseudo-legal moves
-    pub fn generate_king_moves(&mut self, move_stack: &mut Vec<chess_move::Move>, level: MoveGenLevel) {
+    pub fn generate_king_moves(&self, move_stack: &mut Vec<chess_move::Move>, level: MoveGenLevel) {
         match level {
             MoveGenLevel::Captures => generate_king_captures(self, move_stack),
             MoveGenLevel::All => {
@@ -72,7 +72,7 @@ pub fn generate_king_captures(p: &Position, move_stack: &mut Vec<chess_move::Mov
 
 }
 
-pub fn generate_king_quiets(p: &mut Position, move_stack: &mut Vec<chess_move::Move>) {
+pub fn generate_king_quiets(p: &Position, move_stack: &mut Vec<chess_move::Move>) {
     let king = p.get_friendly_piece(Piece::King);
     let king_sq = king.lsb_as_square();
     let pieces = p.get_all_pieces();

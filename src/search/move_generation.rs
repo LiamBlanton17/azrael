@@ -32,7 +32,7 @@ impl Position {
     }
 
     // Public function to call to generate moves for a position
-    pub fn generate_moves(&mut self, move_stack: &mut Vec<chess_move::Move>, level: MoveGenLevel) {
+    pub fn generate_moves(&self, move_stack: &mut Vec<chess_move::Move>, level: MoveGenLevel) {
         move_stack.clear();
         self.generate_pawn_moves(move_stack, level);
         self.generate_knight_moves(move_stack, level);
