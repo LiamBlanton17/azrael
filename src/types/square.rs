@@ -28,6 +28,16 @@ impl Square {
         (self.0 / 8, self.0 % 8)
     }
 
+    #[inline]
+    pub fn to_row(self) -> u8 {
+        self.0 / 8
+    }
+
+    #[inline]
+    pub fn to_col(self) -> u8 {
+        self.0 % 8
+    }
+
     pub fn from_str(s: &str) -> Option<Self> {
         // must be only 2 characters long
         let s_bytes = s.as_bytes();
@@ -61,6 +71,11 @@ impl Square {
         BitBoard(1u64 << self.0)
     }
 
+    #[inline]
+    pub fn idx(&self) -> usize {
+        self.0 as usize
+    }
+
 }
 
 impl std::ops::Sub<u8> for Square {
@@ -76,5 +91,11 @@ impl std::ops::Add<u8> for Square {
 
     fn add(self, rhs: u8) -> Square {
         Square(self.0 + rhs)
+    }
+}
+
+impl std::ops::AddAssign<u8> for Square {
+    fn add_assign(&mut self, rhs: u8) {
+        self.0 += rhs
     }
 }

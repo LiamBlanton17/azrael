@@ -106,4 +106,47 @@ impl Position {
         self.half_moves > 99
     }
 
+    pub fn iter(&self) -> PositionIter {
+        PositionIter { 
+            position: self, 
+            square: Square(0) 
+        }
+    }
+
+}
+
+pub struct PositionIter<'a> {
+    position: &'a Position,
+    square: Square, // 0..64
+}
+
+impl<'a> Iterator for PositionIter<'a> {
+    type Item = (Square, Option<Piece>, Option<Color>);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while self.square < Square(64) {
+            let sq = self.square;
+            let sq_bb = self.square.to_bitboard();
+            self.square += 1;
+
+
+            // Find which color is on this square
+            let color = if self.position.color[Color::White.idx()] & sq_bb != BitBoard(0) {
+                Color::White
+            } else if self.position.color[Color::Black.idx()] & sq_bb != BitBoard(0) {
+                Color::Black
+            } else {
+                return Some((sq, None, None));
+            };
+
+            // Find which piece is on this square
+            for p in [Piece::Pawn, Piece::Bishop, Piece::Knight, Piece::Rook, Piece::Queen, Piece::King] {
+                if self.position.pieces[p.idx()] & sq_bb != BitBoard(0) {
+                    return Some((sq, Some(p), Some(color)));
+                }
+            }
+        }
+
+        None
+    }
 }
