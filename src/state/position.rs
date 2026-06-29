@@ -1,4 +1,4 @@
-use crate::{search::move_generation, types::{bidboard::BitBoard, color::Color, piece::Piece, position::{self, Position}, square::{self, Square}}};
+use crate::{search::move_generation, types::{bidboard::BitBoard, chess_move::Move, color::Color, piece::Piece, position::{self, Position, ZobristHash}, square::{self, Square}}};
 
 impl Position {
 
@@ -84,6 +84,26 @@ impl Position {
             && self.is_square_empty(square::C8)
             && self.is_square_empty(square::B8)
         )
+    }
+
+    pub fn make_move(&self, m: Move) {
+
+    }
+
+    pub fn unmake_move(&self, m: Move) {
+
+    }
+
+    pub fn can_kill_king(&self) -> bool {
+        false
+    }
+
+    pub fn is_three_fold(&self, history: &Vec<ZobristHash>) -> bool {
+        false
+    }
+
+    pub fn is_fifty_move_rule(&self) -> bool {
+        self.half_moves > 99
     }
 
 }
