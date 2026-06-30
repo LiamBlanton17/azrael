@@ -82,7 +82,7 @@ fn generate_ray_moves(shift: i8, sq: Square, friendly: BitBoard, enemy: BitBoard
     while current_bb != BitBoard(0) && current_bb & friendly == BitBoard(0) {
         if current_bb & enemy != BitBoard(0) {
             if level == MoveGenLevel::Captures || level == MoveGenLevel::All {
-                push_move(move_stack, current_bb.lsb_as_square(), sq, chess_move::MOVE_FLAG_CAPTURE, Piece::Empty);
+                push_move(move_stack, current_bb.lsb_as_square(), sq, chess_move::MOVE_FLAG_NONE, Piece::Empty);
             }
             break;
         }

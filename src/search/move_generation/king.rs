@@ -67,7 +67,7 @@ pub fn generate_king_captures(p: &Position, move_stack: &mut Vec<chess_move::Mov
 
     // Add all the attacks to the move stack
     for to in attacks {
-        push_move(move_stack, to, king_sq, chess_move::MOVE_FLAG_CAPTURE, Piece::Empty);
+        push_move(move_stack, to, king_sq, chess_move::MOVE_FLAG_NONE, Piece::Empty);
     }
 
 }

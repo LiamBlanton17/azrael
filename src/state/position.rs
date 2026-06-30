@@ -1,4 +1,4 @@
-use crate::{search::move_generation, types::{bidboard::BitBoard, chess_move::{Move, split_move}, color::Color, piece::Piece, position::{self, Position, ZobristHash}, square::{self, Square}}};
+use crate::{search::move_generation, types::{bidboard::BitBoard, chess_move::{self, Move, split_move}, color::Color, piece::Piece, position::{self, Position, ZobristHash}, square::{self, Square}}};
 
 impl Position {
 
@@ -91,12 +91,23 @@ impl Position {
         let color_idx = self.turn.idx();
         let dest_bb = dest_sq.to_bitboard();
         let orig_bb = orig_sq.to_bitboard();
+
+        match flag {
+            chess_move::MOVE_FLAG_ENPASSANT => {
+
+            },
+            chess_move::MOVE_FLAG_CASTLE => {
+
+            },
+            chess_move::MOVE_FLAG_PROMO => {
+
+            },
+            _ => {},
+        }
     }
 
     pub fn unmake_move(&self, m: Move) {
-        let (dest_sq, orig_sq, piece, flag) = split_move(m);
-        let color_idx = self.turn.idx();
-
+        unimplemented!("Future implement if board copying seems to be the bottleneck")
     }
 
     pub fn can_kill_king(&mut self) -> bool {

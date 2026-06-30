@@ -17,10 +17,10 @@ pub const MOVE_PROMO: Move = 0b0011_0000_0000_0000;
 pub const MOVE_FLAG: Move = 0b1100_0000_0000_0000;
 
 // Flags
-pub const MOVE_FLAG_NONE: Move        = 0b00 << FLAG_SHIFT;
-pub const MOVE_FLAG_CAPTURE: Move     = 0b01 << FLAG_SHIFT;
-pub const MOVE_FLAG_CASTLE: Move      = 0b10 << FLAG_SHIFT;
-pub const MOVE_FLAG_EN_PASSANT: Move  = 0b11 << FLAG_SHIFT;
+pub const MOVE_FLAG_NONE: Move = 0b0000_0000_0000_0000;
+pub const MOVE_FLAG_ENPASSANT: Move = 0b010_0000_0000_0000;
+pub const MOVE_FLAG_CASTLE: Move = 0b0100_0000_0000_0000;
+pub const MOVE_FLAG_PROMO: Move = 0b1000_0000_0000_0000;
 
 pub fn split_move(m: Move) -> (Square, Square, Option<Piece>, Move) {
     let piece= if m & MOVE_FLAG_PROMO != 0 {

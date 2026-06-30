@@ -64,12 +64,14 @@ fn generate_pawn_captures(p: &Position, move_stack: &mut Vec<chess_move::Move>) 
 
     // For each right attack, push it to the move stack
     for to in right_attacks {
-        push_pawn_move(move_stack, to, chess_move::MOVE_FLAG_CAPTURE, 9, p.turn); // offset 9 means shift bitboard 9
+        let flag = if Some(to) == p.en_passant { chess_move::MOVE_FLAG_ENPASSANT} else { chess_move::MOVE_FLAG_NONE };
+        push_pawn_move(move_stack, to, flag, 9, p.turn); // offset 9 means shift bitboard 9
     }
 
     // For each left attack, push it to the move stack
     for to in left_attacks {
-        push_pawn_move(move_stack, to, chess_move::MOVE_FLAG_CAPTURE, 7, p.turn); // offset 7 means shift bitboard 7
+        let flag = if Some(to) == p.en_passant { chess_move::MOVE_FLAG_ENPASSANT} else { chess_move::MOVE_FLAG_NONE };
+        push_pawn_move(move_stack, to, flag, 7, p.turn); // offset 7 means shift bitboard 7
     }
 
 }
