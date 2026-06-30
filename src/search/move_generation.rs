@@ -10,7 +10,7 @@ use crate::types::bidboard::BitBoard;
 use crate::types::{color, piece};
 use crate::types::piece::Piece;
 use crate::types::position::Position;
-use crate::types::chess_move::{self, Move};
+use crate::types::chess_move::{self, MOVE_FLAG_PROMO, Move};
 use crate::types::square::Square;
 
 // Max is 218, in a very weird, impossible position
@@ -49,7 +49,7 @@ pub fn push_move(move_stack: &mut Vec<chess_move::Move>, to: Square, from: Squar
     move_stack.push(
         (to.0 as u16) |
         ((from.0 as u16) << chess_move::ORIGIN_SHIFT) |
-        ((promotion as u16) << chess_move::PROMOT_SHIFT) |
+        ((promotion as u16) << chess_move::PROMO_SHIFT) |
         (flag << chess_move::FLAG_SHIFT)
     );
 }
@@ -66,10 +66,10 @@ fn push_pawn_move(move_stack: &mut Vec<chess_move::Move>, to: Square, flag: Move
     if !is_promotion {
         push_move(move_stack, to, from, flag, Piece::Empty);
     } else {
-        push_move(move_stack, to, from, flag, piece::Piece::Knight);
-        push_move(move_stack, to, from, flag, piece::Piece::Bishop);
-        push_move(move_stack, to, from, flag, piece::Piece::Rook);
-        push_move(move_stack, to, from, flag, piece::Piece::Queen);
+        push_move(move_stack, to, from, MOVE_FLAG_PROMO, piece::Piece::Knight);
+        push_move(move_stack, to, from, MOVE_FLAG_PROMO, piece::Piece::Bishop);
+        push_move(move_stack, to, from, MOVE_FLAG_PROMO, piece::Piece::Rook);
+        push_move(move_stack, to, from, MOVE_FLAG_PROMO, piece::Piece::Queen);
     }
 }
 

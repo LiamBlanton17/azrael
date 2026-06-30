@@ -1,4 +1,4 @@
-use crate::{search::move_generation, types::{bidboard::BitBoard, chess_move::Move, color::Color, piece::Piece, position::{self, Position, ZobristHash}, square::{self, Square}}};
+use crate::{search::move_generation, types::{bidboard::BitBoard, chess_move::{Move, split_move}, color::Color, piece::Piece, position::{self, Position, ZobristHash}, square::{self, Square}}};
 
 impl Position {
 
@@ -87,18 +87,38 @@ impl Position {
     }
 
     pub fn make_move(&self, m: Move) {
-
+        let (dest_sq, orig_sq, piece, flag) = split_move(m);
+        let color_idx = self.turn.idx();
+        let dest_bb = dest_sq.to_bitboard();
+        let orig_bb = orig_sq.to_bitboard();
     }
 
     pub fn unmake_move(&self, m: Move) {
+        let (dest_sq, orig_sq, piece, flag) = split_move(m);
+        let color_idx = self.turn.idx();
 
     }
 
-    pub fn can_kill_king(&self) -> bool {
-        false
+    pub fn can_kill_king(&mut self) -> bool {
+        let king_sq = self.get_friendly_piece(Piece::King).lsb_as_square();
+        self.turn = self.turn.flip();
+        let can_kill = self.is_square_underattack(king_sq);
+        self.turn = self.turn.flip();
+
+        can_kill
     }
 
     pub fn is_three_fold(&self, history: &Vec<ZobristHash>) -> bool {
+        let mut count = 0;
+        for h in history {
+            if *h == self.zobrist {
+                count += 1;
+                if count == 3 {
+                    return true;
+                }
+            }
+        }
+        
         false
     }
 
@@ -129,8 +149,6 @@ impl<'a> Iterator for PositionIter<'a> {
             let sq_bb = self.square.to_bitboard();
             self.square += 1;
 
-
-            // Find which color is on this square
             let color = if self.position.color[Color::White.idx()] & sq_bb != BitBoard(0) {
                 Color::White
             } else if self.position.color[Color::Black.idx()] & sq_bb != BitBoard(0) {
@@ -139,7 +157,6 @@ impl<'a> Iterator for PositionIter<'a> {
                 return Some((sq, None, None));
             };
 
-            // Find which piece is on this square
             for p in [Piece::Pawn, Piece::Bishop, Piece::Knight, Piece::Rook, Piece::Queen, Piece::King] {
                 if self.position.pieces[p.idx()] & sq_bb != BitBoard(0) {
                     return Some((sq, Some(p), Some(color)));

@@ -1,9 +1,7 @@
-use crate::types::chess_move::Move;
 use crate::types::color::Color;
 use crate::types::piece::Piece;
 use crate::types::position::{Position, ZobristHash};
 use crate::types::square::Square;
-use std::sync::OnceLock;
 use rand::{Rng, SeedableRng};
 use rand::rngs::StdRng;
 
@@ -13,9 +11,11 @@ static mut PST_ZOBRIST: [[[u64; 64]; 6]; 2] = [[[0; 64]; 6]; 2]; // magic number
 static mut TURN_ZOBRIST: u64 = 0;
 static mut CASTLING_ZOBRIST: [u64; 16] = [0; 16]; // 1 for each castling combination
 static mut ENPASSANT_ZOBRIST: [u64; 8] = [0; 8]; // 1 for each possible column
+static mut ZOBRIST_IS_INIT: bool = false;
 
 // Initialize at startup
 pub unsafe fn init_zobrist() {
+    ZOBRIST_IS_INIT = true;
     
     let mut rng = StdRng::seed_from_u64(MASTER_ZOBRIST_KEY);
 
@@ -50,6 +50,9 @@ pub unsafe fn init_zobrist() {
 impl Position {
 
     pub unsafe fn set_zobrist(&mut self) {
+        if !ZOBRIST_IS_INIT {
+            panic!("Zobrist hashing has not been initialized!")
+        }
         self.zobrist = self.to_zobrist();
     }
 

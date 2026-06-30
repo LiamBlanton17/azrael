@@ -17,4 +17,14 @@ impl Piece {
     pub fn idx(&self) -> usize {
         *self as usize
     }
+
+    #[inline]
+    pub fn from_promo(bits: u8) -> Piece {
+        match bits {
+            0 => Piece::Knight,
+            1 => Piece::Bishop,
+            2 => Piece::Rook,
+            _ => Piece::Queen,
+        }
+    }
 }
