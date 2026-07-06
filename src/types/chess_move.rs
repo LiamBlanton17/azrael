@@ -1,6 +1,17 @@
 use crate::types::{piece::Piece, square::Square};
 
 
+// Unmove type
+pub struct UnMove {
+    pub en_passant: Option<Square>,
+    pub captured_piece: Piece,
+    pub origin: Square,
+    pub destination: Square,
+    pub flag: u16,
+    pub castling_rights: u8,
+    pub half_moves: u8,
+}
+
 // Move type aliasing to 16 packed bits
 pub type Move = u16;
 

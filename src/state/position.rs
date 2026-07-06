@@ -1,4 +1,4 @@
-use crate::{search::move_generation, types::{bidboard::BitBoard, chess_move::{self, Move, split_move}, color::Color, piece::Piece, position::{self, Position, ZobristHash}, square::{self, Square}}};
+use crate::{search::move_generation, types::{bidboard::BitBoard, chess_move::{self, Move, UnMove, split_move}, color::Color, piece::Piece, position::{self, Position, ZobristHash}, square::{self, Square}}};
 
 impl Position {
 
@@ -86,11 +86,23 @@ impl Position {
         )
     }
 
-    pub fn make_move(&mut self, m: Move) {
+    pub fn make_move(&mut self, m: Move) -> UnMove {
         let (dest_sq, orig_sq, piece, flag) = split_move(m);
+        let captured_piece = self.mailbox[dest_sq.idx()];
+        let um = UnMove {
+            en_passant: self.en_passant,
+            captured_piece: captured_piece,
+            origin: orig_sq,
+            destination: dest_sq,
+            flag: flag,
+            castling_rights: self.castling_rights,
+            half_moves: self.half_moves,
+        };
+
+        um
     }
 
-    pub fn unmake_move(&self, m: Move) {
+    pub fn unmake_move(&self, um: UnMove) {
 
     }
 
