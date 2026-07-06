@@ -4,18 +4,22 @@ use super::bidboard::BitBoard;
 #[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub struct Square(pub u8);
 
-pub const B1: Square = Square(2);
+pub const A1: Square = Square(0);
+pub const B1: Square = Square(1);
 pub const C1: Square = Square(2);
 pub const D1: Square = Square(3);
 pub const E1: Square = Square(3);
 pub const F1: Square = Square(4);
 pub const G1: Square = Square(6);
-pub const B8: Square = Square(58);
+pub const H1: Square = Square(7);
+pub const A8: Square = Square(56);
+pub const B8: Square = Square(57);
 pub const C8: Square = Square(58);
 pub const D8: Square = Square(59);
 pub const E8: Square = Square(60);
 pub const F8: Square = Square(61);
 pub const G8: Square = Square(62);
+pub const H8: Square = Square(63);
 
 impl Square {
     #[inline]

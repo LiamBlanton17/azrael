@@ -27,4 +27,11 @@ impl Piece {
             _ => Piece::Queen,
         }
     }
+
+}
+
+impl Default for Piece {
+    fn default() -> Self {
+        Self::Empty
+    }
 }

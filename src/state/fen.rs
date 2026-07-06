@@ -104,9 +104,11 @@ fn parse_pieces_from(p: &mut Position, pieces: &str) -> bool {
 
             // if piece is found, update the board
             if piece != Piece::Empty {
-                let bit_board = Square::from_row_col((7 - row) as u8, col).to_bitboard();
+                let sq: Square = Square::from_row_col((7 - row) as u8, col);
+                let bit_board = sq.to_bitboard();
                 p.color[color.idx()] |= bit_board;
                 p.pieces[piece.idx()] |= bit_board;
+                p.mailbox[sq.idx()] = piece;
                 col += 1;
             }
         }
@@ -251,6 +253,24 @@ mod tests {
                     color: [
                         BitBoard(0x000000000000FFFF), // White
                         BitBoard(0xFFFF000000000000), // Black
+                    ],
+                    mailbox: [
+                        // Rank 1 (a1-h1) — White back rank
+                        Piece::Rook, Piece::Knight, Piece::Bishop, Piece::Queen, Piece::King, Piece::Bishop, Piece::Knight, Piece::Rook,
+                        // Rank 2 (a2-h2) — White pawns
+                        Piece::Pawn, Piece::Pawn, Piece::Pawn, Piece::Pawn, Piece::Pawn, Piece::Pawn, Piece::Pawn, Piece::Pawn,
+                        // Rank 3
+                        Piece::Empty, Piece::Empty, Piece::Empty, Piece::Empty, Piece::Empty, Piece::Empty, Piece::Empty, Piece::Empty,
+                        // Rank 4
+                        Piece::Empty, Piece::Empty, Piece::Empty, Piece::Empty, Piece::Empty, Piece::Empty, Piece::Empty, Piece::Empty,
+                        // Rank 5
+                        Piece::Empty, Piece::Empty, Piece::Empty, Piece::Empty, Piece::Empty, Piece::Empty, Piece::Empty, Piece::Empty,
+                        // Rank 6
+                        Piece::Empty, Piece::Empty, Piece::Empty, Piece::Empty, Piece::Empty, Piece::Empty, Piece::Empty, Piece::Empty,
+                        // Rank 7 (a7-h7) — Black pawns
+                        Piece::Pawn, Piece::Pawn, Piece::Pawn, Piece::Pawn, Piece::Pawn, Piece::Pawn, Piece::Pawn, Piece::Pawn,
+                        // Rank 8 (a8-h8) — Black back rank
+                        Piece::Rook, Piece::Knight, Piece::Bishop, Piece::Queen, Piece::King, Piece::Bishop, Piece::Knight, Piece::Rook,
                     ],
                     zobrist: 0,
                     half_moves: 0,

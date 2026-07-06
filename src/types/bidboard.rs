@@ -1,6 +1,7 @@
-use std::ops::{BitOrAssign, BitAnd, Shr, Shl, Not, BitOr};
+use std::ops::{BitOrAssign, BitAndAssign, BitAnd, Shr, Shl, Not, BitOr};
 
 use crate::types::square::Square;
+
 
 // Type Bit board
 #[derive(Default, Clone, Copy, PartialEq, Debug)]
@@ -24,6 +25,13 @@ impl BitOrAssign for BitBoard {
     #[inline]
     fn bitor_assign(&mut self, rhs: Self) {
         self.0 |= rhs.0;
+    }
+}
+
+impl BitAndAssign for BitBoard {
+    #[inline]
+    fn bitand_assign(&mut self, rhs: Self) {
+        self.0 &= rhs.0;
     }
 }
 

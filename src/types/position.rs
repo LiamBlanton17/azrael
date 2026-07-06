@@ -1,4 +1,6 @@
 
+use crate::types::piece::Piece;
+
 use super::bidboard::BitBoard;
 use super::color::Color;
 use super::square;
@@ -13,7 +15,7 @@ pub const CASTLE_BK: u8 = 0b0100; // 4: Black Kingside
 pub const CASTLE_BQ: u8 = 0b1000; // 8: Black Queenside
 
 // Main structure for the board state
-#[derive(Default, PartialEq, Debug)]
+#[derive(PartialEq, Debug)]
 pub struct Position {
 
     // Piece bitboards
@@ -21,6 +23,9 @@ pub struct Position {
 
     // Color bitboards
     pub color: [BitBoard; 2],
+
+    // Mailbox
+    pub mailbox: [Piece; 64],
 
     // Zobrist hash of the position
     pub zobrist: ZobristHash,
@@ -37,4 +42,19 @@ pub struct Position {
     // Turn tracker
     pub turn: Color,
 
+}
+
+impl Default for Position {
+    fn default() -> Self {
+        Self {
+            pieces: Default::default(),
+            color: Default::default(),
+            mailbox: [Piece::default(); 64],
+            zobrist: Default::default(),
+            half_moves: 0,
+            castling_rights: 0,
+            en_passant: None,
+            turn: Default::default(),
+        }
+    }
 }
