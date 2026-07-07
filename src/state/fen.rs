@@ -56,7 +56,7 @@ impl Position {
         }
 
         // Set zobrist hash
-        unsafe { p.set_zobrist() };
+        p.set_zobrist();
 
         Ok(p)
     }

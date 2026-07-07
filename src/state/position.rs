@@ -111,13 +111,13 @@ impl Position {
         self.color[this_turn_idx] &= !orig_sq_bb;
         self.pieces[this_piece.idx()] &= !orig_sq_bb;
         self.mailbox[orig_sq.idx()] = Piece::Empty;
-        unsafe { self.zobrist_spc(orig_sq, this_piece, this_turn); }
+        self.zobrist_spc(orig_sq, this_piece, this_turn);
 
         // If a piece sat on the destination square, this remove enemy piece from square
         if captured_piece != Piece::Empty {
             self.color[enemy_turn_idx] &= !dest_sq_bb;
             self.pieces[captured_piece.idx()] &= !dest_sq_bb;
-            unsafe { self.zobrist_spc(dest_sq, captured_piece, enemy_turn); }
+            self.zobrist_spc(dest_sq, captured_piece, enemy_turn);
         }
 
         // Reset the half-move clock on pawn moves and captures, or increment
@@ -129,7 +129,7 @@ impl Position {
 
         // Reset enpassant, removing any stale en passant file from the hash
         if let Some(ep) = self.en_passant {
-            unsafe { self.zobrist_enpassant(ep); }
+            self.zobrist_enpassant(ep);
         }
         self.en_passant = None;
 
@@ -139,14 +139,14 @@ impl Position {
                 self.color[this_turn_idx] |= dest_sq_bb;
                 self.pieces[promo_piece.idx()] |= dest_sq_bb;
                 self.mailbox[dest_sq.idx()] = promo_piece;
-                unsafe { self.zobrist_spc(dest_sq, promo_piece, this_turn); }
+                self.zobrist_spc(dest_sq, promo_piece, this_turn);
             },
             chess_move::MOVE_FLAG_CASTLE => {
                 // Move the king to the destination square
                 self.color[this_turn_idx] |= dest_sq_bb;
                 self.pieces[this_piece.idx()] |= dest_sq_bb;
                 self.mailbox[dest_sq.idx()] = this_piece;
-                unsafe { self.zobrist_spc(dest_sq, this_piece, this_turn); }
+                self.zobrist_spc(dest_sq, this_piece, this_turn);
 
                 // Move the rook to the far side of the king
                 let (rook_from, rook_to) = match dest_sq {
@@ -160,19 +160,19 @@ impl Position {
                 self.color[this_turn_idx] &= !rook_from.to_bitboard();
                 self.pieces[Piece::Rook.idx()] &= !rook_from.to_bitboard();
                 self.mailbox[rook_from.idx()] = Piece::Empty;
-                unsafe { self.zobrist_spc(rook_from, Piece::Rook, this_turn); }
+                self.zobrist_spc(rook_from, Piece::Rook, this_turn);
 
                 self.color[this_turn_idx] |= rook_to.to_bitboard();
                 self.pieces[Piece::Rook.idx()] |= rook_to.to_bitboard();
                 self.mailbox[rook_to.idx()] = Piece::Rook;
-                unsafe { self.zobrist_spc(rook_to, Piece::Rook, this_turn); }
+                self.zobrist_spc(rook_to, Piece::Rook, this_turn);
             },
             chess_move::MOVE_FLAG_ENPASSANT => {
                 // Move the pawn to the destination
                 self.color[this_turn_idx] |= dest_sq_bb;
                 self.pieces[this_piece.idx()] |= dest_sq_bb;
                 self.mailbox[dest_sq.idx()] = this_piece;
-                unsafe { self.zobrist_spc(dest_sq, this_piece, this_turn); }
+                self.zobrist_spc(dest_sq, this_piece, this_turn);
 
                 // Remove the captured pawn, which sits at the interesect of the orig row and the dest column
                 let captured_sq = Square::from_row_col(orig_sq.to_row(), dest_sq.to_col());
@@ -180,34 +180,34 @@ impl Position {
                 self.color[enemy_turn_idx] &= !captured_sq_bb;
                 self.pieces[Piece::Pawn.idx()] &= !captured_sq_bb;
                 self.mailbox[captured_sq.idx()] = Piece::Empty;
-                unsafe { self.zobrist_spc(captured_sq, Piece::Pawn, enemy_turn); }
+                self.zobrist_spc(captured_sq, Piece::Pawn, enemy_turn);
             },
             _ => {
                 // Move piece to the destination
                 self.color[this_turn_idx] |= dest_sq_bb;
                 self.pieces[this_piece.idx()] |= dest_sq_bb;
                 self.mailbox[dest_sq.idx()] = this_piece;
-                unsafe { self.zobrist_spc(dest_sq, this_piece, this_turn); }
+                self.zobrist_spc(dest_sq, this_piece, this_turn);
 
                 // A double pawn push exposes an en passant target on the square it skipped over
                 if this_piece == Piece::Pawn && orig_sq.0.abs_diff(dest_sq.0) == 16 {
                     let ep = Square((orig_sq.0 + dest_sq.0) / 2);
                     self.en_passant = Some(ep);
-                    unsafe { self.zobrist_enpassant(ep); }
+                    self.zobrist_enpassant(ep);
                 }
             },
         }
 
         // Unset castling rights, in a piece lands or moves away from the rook or king home squares.
         // XOR the old castling contribution out of the hash, then the updated one back in.
-        unsafe { self.zobrist_castling(); }
+        self.zobrist_castling();
         self.castling_rights &= !castling_rights_voided_by(orig_sq);
         self.castling_rights &= !castling_rights_voided_by(dest_sq);
-        unsafe { self.zobrist_castling(); }
+        self.zobrist_castling();
 
         // Hand the turn to the opponent, toggling the side-to-move contribution
         self.turn = self.turn.flip();
-        unsafe { self.zobrist_turn(); }
+        self.zobrist_turn();
 
         um
     }
@@ -232,21 +232,21 @@ impl Position {
         let enemy_turn = self.turn.flip();
 
         // Restore the side-to-move contribution to match the flipped turn
-        unsafe { self.zobrist_turn(); }
+        self.zobrist_turn();
 
         // reset enpassant, swapping the post-move en passant file out for the restored one
         if let Some(ep) = self.en_passant {
-            unsafe { self.zobrist_enpassant(ep); }
+            self.zobrist_enpassant(ep);
         }
         self.en_passant = um.en_passant;
         if let Some(ep) = self.en_passant {
-            unsafe { self.zobrist_enpassant(ep); }
+            self.zobrist_enpassant(ep);
         }
 
         // reset castlign rights, swapping the post-move contribution out for the restored one
-        unsafe { self.zobrist_castling(); }
+        self.zobrist_castling();
         self.castling_rights = um.castling_rights;
-        unsafe { self.zobrist_castling(); }
+        self.zobrist_castling();
 
         // reset half move counter
         self.half_moves = um.half_moves;
@@ -263,14 +263,14 @@ impl Position {
         self.color[this_turn_idx] &= !dest_bb;
         self.pieces[this_piece.idx()] &= !dest_bb;
         self.mailbox[um.destination.idx()] = Piece::Empty;
-        unsafe { self.zobrist_spc(um.destination, this_piece, this_turn); }
+        self.zobrist_spc(um.destination, this_piece, this_turn);
 
         // restore any piece that was captured on the destination square
         if um.captured_piece != Piece::Empty {
             self.color[enemy_turn_idx] |= dest_bb;
             self.pieces[um.captured_piece.idx()] |= dest_bb;
             self.mailbox[um.destination.idx()] = um.captured_piece;
-            unsafe { self.zobrist_spc(um.destination, um.captured_piece, enemy_turn); }
+            self.zobrist_spc(um.destination, um.captured_piece, enemy_turn);
         }
 
         match um.flag {
@@ -279,14 +279,14 @@ impl Position {
                 self.color[this_turn_idx] |= orig_bb;
                 self.pieces[Piece::Pawn.idx()] |= orig_bb;
                 self.mailbox[um.origin.idx()] = Piece::Pawn;
-                unsafe { self.zobrist_spc(um.origin, Piece::Pawn, this_turn); }
+                self.zobrist_spc(um.origin, Piece::Pawn, this_turn);
             },
             chess_move::MOVE_FLAG_CASTLE => {
                 // Move the king back to the origin
                 self.color[this_turn_idx] |= orig_bb;
                 self.pieces[this_piece.idx()] |= orig_bb;
                 self.mailbox[um.origin.idx()] = this_piece;
-                unsafe { self.zobrist_spc(um.origin, this_piece, this_turn); }
+                self.zobrist_spc(um.origin, this_piece, this_turn);
 
                 // Move the rook to the far side of the king
                 let (rook_from, rook_to) = match um.destination {
@@ -301,20 +301,20 @@ impl Position {
                 self.color[this_turn_idx] |= rook_from.to_bitboard();
                 self.pieces[Piece::Rook.idx()] |= rook_from.to_bitboard();
                 self.mailbox[rook_from.idx()] = Piece::Rook;
-                unsafe { self.zobrist_spc(rook_from, Piece::Rook, this_turn); }
+                self.zobrist_spc(rook_from, Piece::Rook, this_turn);
 
                 // Remove the rook to the "rook to"
                 self.color[this_turn_idx] &= !rook_to.to_bitboard();
                 self.pieces[Piece::Rook.idx()] &= !rook_to.to_bitboard();
                 self.mailbox[rook_to.idx()] = Piece::Empty;
-                unsafe { self.zobrist_spc(rook_to, Piece::Rook, this_turn); }
+                self.zobrist_spc(rook_to, Piece::Rook, this_turn);
             },
             chess_move::MOVE_FLAG_ENPASSANT => {
                 // Move piece back to the origin
                 self.color[this_turn_idx] |= orig_bb;
                 self.pieces[this_piece.idx()] |= orig_bb;
                 self.mailbox[um.origin.idx()] = Piece::Pawn;
-                unsafe { self.zobrist_spc(um.origin, Piece::Pawn, this_turn); }
+                self.zobrist_spc(um.origin, Piece::Pawn, this_turn);
 
                 // Put the captured pawn back
                 let captured_sq = Square::from_row_col(um.origin.to_row(), um.destination.to_col());
@@ -322,14 +322,14 @@ impl Position {
                 self.color[enemy_turn_idx] |= captured_sq_bb;
                 self.pieces[Piece::Pawn.idx()] |= captured_sq_bb;
                 self.mailbox[captured_sq.idx()] = Piece::Pawn;
-                unsafe { self.zobrist_spc(captured_sq, Piece::Pawn, enemy_turn); }
+                self.zobrist_spc(captured_sq, Piece::Pawn, enemy_turn);
             },
             _ => {
                 // Move piece back to the origin
                 self.color[this_turn_idx] |= orig_bb;
                 self.pieces[this_piece.idx()] |= orig_bb;
                 self.mailbox[um.origin.idx()] = this_piece;
-                unsafe { self.zobrist_spc(um.origin, this_piece, this_turn); }
+                self.zobrist_spc(um.origin, this_piece, this_turn);
             },
         }
     }

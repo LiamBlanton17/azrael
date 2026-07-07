@@ -22,7 +22,7 @@ fn main() {
 pub fn perf_test() {
 
     // must init the zobrist tables
-    unsafe { init_zobrist(); }
+    init_zobrist();
 
     // recursive search for counting visited notes
     fn count_nodes_visited(p: &mut Position, move_stack: &mut Vec<Vec<Move>>, history: &mut Vec<ZobristHash>, depth: usize) -> u64 {
