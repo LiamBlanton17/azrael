@@ -3,7 +3,6 @@ use crate::types::position::{self, Position};
 use crate::types::color::Color;
 use crate::types::square::Square;
 use crate::types::piece::Piece;
-use crate::types::bidboard::BitBoard;
 use super::errors::FENErrors;
 
 impl Position {
@@ -57,7 +56,7 @@ impl Position {
         }
 
         // Set zobrist hash
-        p.zobrist = unsafe { p.to_zobrist() };
+        unsafe { p.set_zobrist() };
 
         Ok(p)
     }
@@ -230,7 +229,9 @@ fn parse_half_moves(position: &mut Position, half_moves: &str) -> bool {
 #[cfg(test)]
 mod tests {
 
-    use super::*;
+    use crate::types::bidboard::BitBoard;
+
+use super::*;
 
     #[test]
     fn test_from_fen() {

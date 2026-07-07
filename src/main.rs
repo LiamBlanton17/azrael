@@ -17,8 +17,6 @@ fn main() {
     perf_test();
 }
 
-const MOVE_STACK_DEPTH: usize = 20;
-
 // Used by the CLI to run a perf test -- this verifies the move generation is working correctly
 // It also provides a best test of raw nodes per second the engine can do, without any other overhead than raw search
 pub fn perf_test() {

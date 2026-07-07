@@ -1,4 +1,4 @@
-use crate::{search::move_generation, types::{bidboard::BitBoard, chess_move::{self, Move, UnMove, split_move}, color::Color, piece::Piece, position::{self, Position, ZobristHash}, square::{self, Square}}};
+use crate::{types::{bidboard::BitBoard, chess_move::{self, Move, UnMove, split_move}, color::Color, piece::Piece, position::{self, Position, ZobristHash}, square::{self, Square}}};
 
 impl Position {
 
@@ -363,6 +363,7 @@ impl Position {
         self.half_moves > 99
     }
 
+    #[allow(dead_code)]
     pub fn print(&self) {
         for row in (0..8).rev() {
             print!("{} ", row + 1);
@@ -385,7 +386,7 @@ impl Position {
         );
     }
 
-    pub fn iter(&self) -> PositionIter {
+    pub fn iter(&self) -> PositionIter<'_> {
         PositionIter { 
             position: self, 
             square: Square(0) 
