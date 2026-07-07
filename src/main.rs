@@ -8,6 +8,7 @@ use types::position::Position;
 use types::chess_move::Move;
 use search::move_generation::MoveGenLevel;
 
+use crate::state::zobrist::init_zobrist;
 use crate::types::position::ZobristHash;
 
 fn main() {
@@ -20,6 +21,8 @@ const MOVE_STACK_DEPTH: usize = 20;
 // It also provides a best test of raw nodes per second the engine can do, without overhead of move ordering or eval
 pub fn perf_test() {
 
+    unsafe { init_zobrist(); }
+
     fn count_nodes_visited(p: &mut Position, move_stack: &mut Vec<Vec<Move>>, history: &mut Vec<ZobristHash>, depth: usize) -> u64 {
         if depth == 0 {
             return 1;
@@ -30,10 +33,10 @@ pub fn perf_test() {
 
         let moves: Vec<Move> = move_stack[depth].clone();
         let mut nodes = 0;
+        history.push(p.zobrist);
         for m in moves {
             let um = p.make_move(m);
-            history.push(p.zobrist);
-            if !p.can_kill_king() && !p.is_three_fold(history) && !p.is_fifty_move_rule() {
+            if !p.can_kill_king() {
                 nodes += count_nodes_visited(p, move_stack, history, depth - 1);
             }
             p.unmake_move(um);

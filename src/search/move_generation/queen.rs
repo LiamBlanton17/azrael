@@ -28,7 +28,7 @@ impl Position {
 
     // Returns true if queen for the color given can capture the square give
     pub fn is_square_underattack_by_queen(&self, sq: Square, c: Color) -> bool {
-        let queens = self.get_friendly_piece(Piece::Queen);
+        let queens = self.get_piece(Piece::Queen, c);
         let friendly = self.get_friendly_pieces();
         let enemy = self.get_enemy_pieces();
 

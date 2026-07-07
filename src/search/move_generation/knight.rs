@@ -69,7 +69,7 @@ fn generate_knight_captures(p: &Position, move_stack: &mut Vec<chess_move::Move>
         );
 
         for to in attacks {
-            push_move(move_stack, to, knight, chess_move::MOVE_FLAG_NONE, Piece::Empty);
+            push_move(move_stack, to, knight, chess_move::MOVE_FLAG_NONE, Piece::Knight);
         }
     }
 
@@ -94,7 +94,7 @@ fn generate_knight_quiets(p: &Position, move_stack: &mut Vec<chess_move::Move>) 
         );
 
         for to in attacks {
-            push_move(move_stack, to, knight, chess_move::MOVE_FLAG_NONE, Piece::Empty);
+            push_move(move_stack, to, knight, chess_move::MOVE_FLAG_NONE, Piece::Knight);
         }
     }
 

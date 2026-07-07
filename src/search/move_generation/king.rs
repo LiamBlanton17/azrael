@@ -67,7 +67,7 @@ pub fn generate_king_captures(p: &Position, move_stack: &mut Vec<chess_move::Mov
 
     // Add all the attacks to the move stack
     for to in attacks {
-        push_move(move_stack, to, king_sq, chess_move::MOVE_FLAG_NONE, Piece::Empty);
+        push_move(move_stack, to, king_sq, chess_move::MOVE_FLAG_NONE, Piece::Knight);
     }
 
 }
@@ -91,17 +91,17 @@ pub fn generate_king_quiets(p: &Position, move_stack: &mut Vec<chess_move::Move>
 
     // Add all the moves to the move stack
     for to in moves {
-        push_move(move_stack, to, king_sq, chess_move::MOVE_FLAG_NONE, Piece::Empty);
+        push_move(move_stack, to, king_sq, chess_move::MOVE_FLAG_NONE, Piece::Knight);
     }
 
     // Add castling moves if possible
     if p.can_castle_kingside() {
         let to = if p.turn == Color::White { square::G1 } else { square::G8 };
-        push_move(move_stack, to, king_sq, chess_move::MOVE_FLAG_CASTLE, Piece::Empty);
+        push_move(move_stack, to, king_sq, chess_move::MOVE_FLAG_CASTLE, Piece::Knight);
     }
     if p.can_castle_queenside() {
-        let to = if p.turn == Color::White { square::G1 } else { square::G8 };
-        push_move(move_stack, to, king_sq, chess_move::MOVE_FLAG_CASTLE, Piece::Empty);
+        let to = if p.turn == Color::White { square::C1 } else { square::C8 };
+        push_move(move_stack, to, king_sq, chess_move::MOVE_FLAG_CASTLE, Piece::Knight);
     }
 
 }

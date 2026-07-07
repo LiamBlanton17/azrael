@@ -30,7 +30,7 @@ impl Position {
         let attacks= if c == color::Color::White {
             ((pawns & NOT_H_FILE) << 9u32) | ((pawns & NOT_A_FILE) << 7u32)
         } else {
-            ((pawns & NOT_H_FILE) >> 9u32) | ((pawns & NOT_A_FILE) >> 7u32)
+            ((pawns & NOT_A_FILE) >> 9u32) | ((pawns & NOT_H_FILE) >> 7u32)
         };
 
         // Check if any attack can see the square
@@ -39,8 +39,8 @@ impl Position {
 
 }
 
-const NOT_A_FILE: BitBoard = BitBoard(0x7F7F7F7F7F7F7F7F);
-const NOT_H_FILE: BitBoard = BitBoard(0xFEFEFEFEFEFEFEFE);
+const NOT_A_FILE: BitBoard = BitBoard(0xFEFEFEFEFEFEFEFE);
+const NOT_H_FILE: BitBoard = BitBoard(0x7F7F7F7F7F7F7F7F);
 
 const RANK_2: BitBoard = BitBoard(0x000000000000FF00);
 const RANK_7: BitBoard = BitBoard(0x00FF000000000000); 
@@ -55,7 +55,7 @@ fn generate_pawn_captures(p: &Position, move_stack: &mut Vec<chess_move::Move>) 
     let (possible_left_attacks, possible_right_attacks) = if p.turn == color::Color::White {
         ((pawns & NOT_H_FILE) << 9u32, (pawns & NOT_A_FILE) << 7u32)
     } else {
-        ((pawns & NOT_H_FILE) >> 9u32, (pawns & NOT_A_FILE) >> 7u32)
+        ((pawns & NOT_A_FILE) >> 9u32, (pawns & NOT_H_FILE) >> 7u32)
     };
 
     // Get the actual attacks
@@ -65,13 +65,13 @@ fn generate_pawn_captures(p: &Position, move_stack: &mut Vec<chess_move::Move>) 
     // For each right attack, push it to the move stack
     for to in right_attacks {
         let flag = if Some(to) == p.en_passant { chess_move::MOVE_FLAG_ENPASSANT} else { chess_move::MOVE_FLAG_NONE };
-        push_pawn_move(move_stack, to, flag, 9, p.turn); // offset 9 means shift bitboard 9
+        push_pawn_move(move_stack, to, flag, 7, p.turn); // offset 7 means shift bitboard 7
     }
 
     // For each left attack, push it to the move stack
     for to in left_attacks {
         let flag = if Some(to) == p.en_passant { chess_move::MOVE_FLAG_ENPASSANT} else { chess_move::MOVE_FLAG_NONE };
-        push_pawn_move(move_stack, to, flag, 7, p.turn); // offset 7 means shift bitboard 7
+        push_pawn_move(move_stack, to, flag, 9, p.turn); // offset 9 means shift bitboard 9
     }
 
 }

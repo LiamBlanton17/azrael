@@ -299,8 +299,10 @@ impl Position {
     }
 
     pub fn can_kill_king(&mut self) -> bool {
-        let king_sq = self.get_friendly_piece(Piece::King).lsb_as_square();
+        // Called after make_move, so flip turn to see if that player's king is in check
+        // Probably rename the function, bit confusing
         self.turn = self.turn.flip();
+        let king_sq = self.get_friendly_piece(Piece::King).lsb_as_square();
         let can_kill = self.is_square_underattack(king_sq);
         self.turn = self.turn.flip();
 
@@ -323,6 +325,28 @@ impl Position {
 
     pub fn is_fifty_move_rule(&self) -> bool {
         self.half_moves > 99
+    }
+
+    pub fn print(&self) {
+        for row in (0..8).rev() {
+            print!("{} ", row + 1);
+            for col in 0..8 {
+                let sq = Square::from_row_col(row, col);
+                let piece = self.mailbox[sq.idx()];
+                let color = if self.color[Color::White.idx()] & sq.to_bitboard() != BitBoard(0) {
+                    Color::White
+                } else {
+                    Color::Black
+                };
+                print!("{} ", piece.to_char(color));
+            }
+            println!();
+        }
+        println!("  a b c d e f g h");
+        println!(
+            "turn: {:?}, castling: {:04b}, en passant: {:?}, half moves: {}",
+            self.turn, self.castling_rights, self.en_passant, self.half_moves
+        );
     }
 
     pub fn iter(&self) -> PositionIter {

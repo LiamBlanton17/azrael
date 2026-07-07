@@ -1,3 +1,5 @@
+use crate::types::color::Color;
+
 
 // Piece type enum
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -25,6 +27,23 @@ impl Piece {
             1 => Piece::Bishop,
             2 => Piece::Rook,
             _ => Piece::Queen,
+        }
+    }
+
+    #[inline]
+    pub fn to_char(&self, c: Color) -> char {
+        let ch = match self {
+            Piece::Pawn => 'p',
+            Piece::Knight => 'n',
+            Piece::Bishop => 'b',
+            Piece::Rook => 'r',
+            Piece::Queen => 'q',
+            Piece::King => 'k',
+            Piece::Empty => return '.',
+        };
+        match c {
+            Color::White => ch.to_ascii_uppercase(),
+            Color::Black => ch,
         }
     }
 
