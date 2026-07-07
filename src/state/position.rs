@@ -197,6 +197,103 @@ impl Position {
 
     pub fn unmake_move(&mut self, um: UnMove) {
 
+        /*
+        UnMove {
+            en_passant: self.en_passant,
+            captured_piece: captured_piece,
+            origin: orig_sq,
+            destination: dest_sq,
+            flag: flag,
+            castling_rights: self.castling_rights,
+            half_moves: self.half_moves,
+        }; */
+
+        // get enemy turn and flip turn
+        let enemy_turn_idx = self.turn.idx();
+        self.turn = self.turn.flip();
+
+        // reset enpassant
+        self.en_passant = um.en_passant;
+
+        // reset castlign rights
+        self.castling_rights = um.castling_rights;
+
+        // reset half move counter
+        self.half_moves = um.half_moves;
+
+        // find out which piece is at destination
+        let this_piece = self.mailbox[um.destination.idx()];
+
+        // parse out some variables
+        let this_turn_idx = self.turn.idx();
+        let orig_bb = um.origin.to_bitboard();
+        let dest_bb = um.destination.to_bitboard();
+
+        // move piece off of the destination
+        self.color[this_turn_idx] &= !dest_bb;
+        self.pieces[this_piece.idx()] &= !dest_bb;
+        self.mailbox[um.destination.idx()] = Piece::Empty;
+
+        // restore any piece that was captured on the destination square
+        if um.captured_piece != Piece::Empty {
+            self.color[enemy_turn_idx] |= dest_bb;
+            self.pieces[um.captured_piece.idx()] |= dest_bb;
+            self.mailbox[um.destination.idx()] = um.captured_piece;
+        }
+
+        match um.flag {
+            chess_move::MOVE_FLAG_PROMO => {
+                // Replace the piece with pawn
+                self.color[this_turn_idx] |= orig_bb;
+                self.pieces[Piece::Pawn.idx()] |= orig_bb;
+                self.mailbox[um.origin.idx()] = Piece::Pawn;
+            },
+            chess_move::MOVE_FLAG_CASTLE => {
+                // Move the king back to the origin
+                self.color[this_turn_idx] |= orig_bb;
+                self.pieces[this_piece.idx()] |= orig_bb;
+                self.mailbox[um.origin.idx()] = this_piece;
+
+                // Move the rook to the far side of the king
+                let (rook_from, rook_to) = match um.destination {
+                    square::C1 => (square::A1, square::D1), // White queenside
+                    square::G1 => (square::H1, square::F1), // White kingside
+                    square::C8 => (square::A8, square::D8), // Black queenside
+                    square::G8 => (square::H8, square::F8), // Black kingside
+                    _ => panic!("Unmoving castling but to an impossible square?"),
+                };
+
+                // Return the rook to the "rook from"
+                self.color[this_turn_idx] |= rook_from.to_bitboard();
+                self.pieces[Piece::Rook.idx()] |= rook_from.to_bitboard();
+                self.mailbox[rook_from.idx()] = Piece::Rook;
+
+                // Remove the rook to the "rook to"
+                self.color[this_turn_idx] &= !rook_to.to_bitboard();
+                self.pieces[Piece::Rook.idx()] &= !rook_to.to_bitboard();
+                self.mailbox[rook_to.idx()] = Piece::Empty;
+            },
+            chess_move::MOVE_FLAG_ENPASSANT => {
+                // Move piece back to the origin
+                self.color[this_turn_idx] |= orig_bb;
+                self.pieces[this_piece.idx()] |= orig_bb;
+                self.mailbox[um.origin.idx()] = Piece::Pawn;
+
+                // Put the captured pawn back
+                let captured_sq = Square::from_row_col(um.origin.to_row(), um.destination.to_col());
+                let captured_sq_bb = captured_sq.to_bitboard();
+                self.color[enemy_turn_idx] |= captured_sq_bb;
+                self.pieces[Piece::Pawn.idx()] |= captured_sq_bb;
+                self.mailbox[captured_sq.idx()] = Piece::Pawn;
+            },
+            _ => {
+                // Move piece back to the origin
+                self.color[this_turn_idx] |= orig_bb;
+                self.pieces[this_piece.idx()] |= orig_bb;
+                self.mailbox[um.origin.idx()] = this_piece;
+            },
+        }
+
         // TODO: in future incrementally update the zobrist
         unsafe { self.zobrist = self.to_zobrist(); }
     }
