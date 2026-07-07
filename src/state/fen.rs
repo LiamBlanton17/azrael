@@ -55,7 +55,10 @@ impl Position {
         if !parse_half_moves(&mut p, half_moves) {
             return Err(FENErrors::InvalidHalfMoves);
         }
-        
+
+        // Set zobrist hash
+        p.zobrist = unsafe { p.to_zobrist() };
+
         Ok(p)
     }
 

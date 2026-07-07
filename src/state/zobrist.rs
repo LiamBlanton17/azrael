@@ -99,7 +99,7 @@ impl Position {
 
     #[inline]
     pub unsafe fn zobrist_enpassant(&mut self, sq: Square) {
-        self.zobrist ^= ENPASSANT_ZOBRIST[sq.idx()];
+        self.zobrist ^= ENPASSANT_ZOBRIST[sq.to_col() as usize];
     }
 
 }
