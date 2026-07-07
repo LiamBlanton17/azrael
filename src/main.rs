@@ -31,12 +31,14 @@ pub fn perf_test() {
         let moves: Vec<Move> = move_stack[depth].clone();
         let mut nodes = 0;
         for m in moves {
-            p.make_move(m);
+            let um = p.make_move(m);
+            history.push(p.zobrist);
             if !p.can_kill_king() && !p.is_three_fold(history) && !p.is_fifty_move_rule() {
                 nodes += count_nodes_visited(p, move_stack, history, depth - 1);
             }
-            p.unmake_move(m);
+            p.unmake_move(um);
         }
+        history.pop();
 
         nodes
     }

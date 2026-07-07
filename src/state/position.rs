@@ -87,8 +87,14 @@ impl Position {
     }
 
     pub fn make_move(&mut self, m: Move) -> UnMove {
-        let (dest_sq, orig_sq, piece, flag) = split_move(m);
+        // Parse out move and set initial variables
+        let (dest_sq, orig_sq, promo_piece, flag) = split_move(m);
+        let dest_sq_bb = dest_sq.to_bitboard();
+        let orig_sq_bb = orig_sq.to_bitboard();
+        let this_piece = self.mailbox[orig_sq.idx()];
         let captured_piece = self.mailbox[dest_sq.idx()];
+        let this_turn_idx = self.turn.idx();
+        let enemy_turn_idx = self.turn.flip().idx();
         let um = UnMove {
             en_passant: self.en_passant,
             captured_piece: captured_piece,
@@ -99,11 +105,100 @@ impl Position {
             half_moves: self.half_moves,
         };
 
+        // Move from its origin
+        self.color[this_turn_idx] &= !orig_sq_bb;
+        self.pieces[this_piece.idx()] &= !orig_sq_bb;
+        self.mailbox[orig_sq.idx()] = Piece::Empty;
+
+        // If a piece sat on the destination square, this remove enemy piece from square
+        if captured_piece != Piece::Empty {
+            self.color[enemy_turn_idx] &= !dest_sq_bb;
+            self.pieces[captured_piece.idx()] &= !dest_sq_bb;
+        }
+
+        // Reset the half-move clock on pawn moves and captures, or increment
+        if this_piece == Piece::Pawn || captured_piece != Piece::Empty {
+            self.half_moves = 0;
+        } else {
+            self.half_moves += 1;
+        }
+
+        // Reset enpassant
+        self.en_passant = None;
+
+        match flag {
+            chess_move::MOVE_FLAG_PROMO => {
+                // Replace the pawn with the promotion piece
+                self.color[this_turn_idx] |= dest_sq_bb;
+                self.pieces[promo_piece.idx()] |= dest_sq_bb;
+                self.mailbox[dest_sq.idx()] = promo_piece;
+            },
+            chess_move::MOVE_FLAG_CASTLE => {
+                // Move the king to the destination square
+                self.color[this_turn_idx] |= dest_sq_bb;
+                self.pieces[this_piece.idx()] |= dest_sq_bb;
+                self.mailbox[dest_sq.idx()] = this_piece;
+
+                // Move the rook to the far side of the king
+                let (rook_from, rook_to) = match dest_sq {
+                    square::C1 => (square::A1, square::D1), // White queenside
+                    square::G1 => (square::H1, square::F1), // White kingside
+                    square::C8 => (square::A8, square::D8), // Black queenside
+                    square::G8 => (square::H8, square::F8), // Black kingside
+                    _ => panic!("Castling but to an impossible square?"),
+                };
+
+                self.color[this_turn_idx] &= !rook_from.to_bitboard();
+                self.pieces[Piece::Rook.idx()] &= !rook_from.to_bitboard();
+                self.mailbox[rook_from.idx()] = Piece::Empty;
+
+                self.color[this_turn_idx] |= rook_to.to_bitboard();
+                self.pieces[Piece::Rook.idx()] |= rook_to.to_bitboard();
+                self.mailbox[rook_to.idx()] = Piece::Rook;
+            },
+            chess_move::MOVE_FLAG_ENPASSANT => {
+                // Move the pawn to the destination
+                self.color[this_turn_idx] |= dest_sq_bb;
+                self.pieces[this_piece.idx()] |= dest_sq_bb;
+                self.mailbox[dest_sq.idx()] = this_piece;
+
+                // Remove the captured pawn, which sits at the interesect of the orig row and the dest column
+                let captured_sq = Square::from_row_col(orig_sq.to_row(), dest_sq.to_col());
+                let captured_sq_bb = captured_sq.to_bitboard();
+                self.color[enemy_turn_idx] &= !captured_sq_bb;
+                self.pieces[Piece::Pawn.idx()] &= !captured_sq_bb;
+                self.mailbox[captured_sq.idx()] = Piece::Empty;
+            },
+            _ => {
+                // Move piece to the destination
+                self.color[this_turn_idx] |= dest_sq_bb;
+                self.pieces[this_piece.idx()] |= dest_sq_bb;
+                self.mailbox[dest_sq.idx()] = this_piece;
+
+                // A double pawn push exposes an en passant target on the square it skipped over
+                if this_piece == Piece::Pawn && orig_sq.0.abs_diff(dest_sq.0) == 16 {
+                    self.en_passant = Some(Square((orig_sq.0 + dest_sq.0) / 2));
+                }
+            },
+        }
+
+        // Unset castling rights, in a piece lands or moves away from the rook or king home squares
+        self.castling_rights &= !castling_rights_voided_by(orig_sq);
+        self.castling_rights &= !castling_rights_voided_by(dest_sq);
+
+        // Hand the turn to the opponent
+        self.turn = self.turn.flip();
+
+        // TODO: in future incrementally update the zobrist
+        unsafe { self.zobrist = self.to_zobrist(); }
+
         um
     }
 
-    pub fn unmake_move(&self, um: UnMove) {
+    pub fn unmake_move(&mut self, um: UnMove) {
 
+        // TODO: in future incrementally update the zobrist
+        unsafe { self.zobrist = self.to_zobrist(); }
     }
 
     pub fn can_kill_king(&mut self) -> bool {
@@ -140,6 +235,20 @@ impl Position {
         }
     }
 
+}
+
+// Castling rights guarded by a given square. A king/rook home square maps to the rights that
+// depend on that piece staying put; any move that vacates or captures onto it must clear them.
+fn castling_rights_voided_by(sq: Square) -> u8 {
+    match sq {
+        square::E1 => position::CASTLE_WK | position::CASTLE_WQ,
+        square::A1 => position::CASTLE_WQ,
+        square::H1 => position::CASTLE_WK,
+        square::E8 => position::CASTLE_BK | position::CASTLE_BQ,
+        square::A8 => position::CASTLE_BQ,
+        square::H8 => position::CASTLE_BK,
+        _ => 0,
+    }
 }
 
 pub struct PositionIter<'a> {
