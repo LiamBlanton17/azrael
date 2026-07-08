@@ -91,7 +91,7 @@ fn wrap_mask(shift: i8) -> BitBoard {
 
 // Define helper function to generate ray moves
 // TODO: refactor to use magic bitboards instead
-fn generate_ray_moves(shift: i8, sq: Square, friendly: BitBoard, enemy: BitBoard, level: MoveGenLevel, move_stack: &mut Vec<chess_move::Move>) {
+pub fn generate_ray_moves(shift: i8, sq: Square, friendly: BitBoard, enemy: BitBoard, level: MoveGenLevel, move_stack: &mut Vec<chess_move::Move>) {
     let mask = wrap_mask(shift);
     let apply_shift = |bb: BitBoard| {
         let shifted = if shift >= 0 { bb << (shift as u32) } else { bb >> ((-shift) as u32) };
