@@ -1,11 +1,9 @@
 use crate::search::magics::bishop::get_bishop_moves;
 use crate::search::move_generation::push_move;
 use crate::types::bidboard::BitBoard;
-use crate::types::color::Color;
 use crate::types::piece::Piece;
 use crate::types::position::Position;
 use crate::types::chess_move::{self, MOVE_FLAG_NONE};
-use crate::types::square::Square;
 use super::MoveGenLevel;
 
 impl Position {
@@ -29,20 +27,6 @@ impl Position {
                 push_move(move_stack, to, bishop, MOVE_FLAG_NONE, Piece::Knight);
             }
         }
-    }
-
-    // Returns true if bishop for the color given can capture the square give
-    pub fn is_square_underattack_by_bishop(&self, sq: Square, c: Color) -> bool {
-        let bishops = self.get_piece(Piece::Bishop, c);
-        let occupancy = self.get_all_pieces();
-
-        for bishop in bishops {
-            if get_bishop_moves(bishop, occupancy) & sq.to_bitboard() != BitBoard(0) {
-                return true;
-            }
-        }
-
-        false
     }
 
 }

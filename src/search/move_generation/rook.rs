@@ -1,11 +1,8 @@
 use crate::search::magics::rook::get_rook_moves;
 use crate::search::move_generation::push_move;
-use crate::types::bidboard::BitBoard;
-use crate::types::color::Color;
 use crate::types::piece::Piece;
 use crate::types::position::Position;
 use crate::types::chess_move::{self, MOVE_FLAG_NONE};
-use crate::types::square::Square;
 use super::MoveGenLevel;
 
 impl Position {
@@ -29,20 +26,6 @@ impl Position {
                 push_move(move_stack, to, rook, MOVE_FLAG_NONE, Piece::Knight);
             }
         }
-    }
-
-    // Returns true if rook for the color given can capture the square give
-    pub fn is_square_underattack_by_rook(&self, sq: Square, c: Color) -> bool {
-        let rooks = self.get_piece(Piece::Rook, c);
-        let occupancy = self.get_all_pieces();
-
-        for rook in rooks {
-            if get_rook_moves(rook, occupancy) & sq.to_bitboard() != BitBoard(0) {
-                return true;
-            }
-        }
-
-        false
     }
 
 }
