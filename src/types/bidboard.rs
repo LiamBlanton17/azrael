@@ -38,6 +38,7 @@ impl BitAndAssign for BitBoard {
 impl BitOr for BitBoard {
     type Output = BitBoard;
 
+    #[inline]
     fn bitor(self, rhs: Self) -> BitBoard {
         BitBoard(self.0 | rhs.0)
     }
@@ -46,6 +47,7 @@ impl BitOr for BitBoard {
 impl BitAnd for BitBoard {
     type Output = BitBoard;
     
+    #[inline]
     fn bitand(self, rhs: BitBoard) -> BitBoard {
         BitBoard(self.0 & rhs.0)
     }
@@ -54,6 +56,7 @@ impl BitAnd for BitBoard {
 impl Shr<u32> for BitBoard {
     type Output = BitBoard;
     
+    #[inline]
     fn shr(self, rhs: u32) -> BitBoard {
         BitBoard(self.0 >> rhs)
     }
@@ -63,6 +66,7 @@ impl Shr<u32> for BitBoard {
 impl Shl<u32> for BitBoard {
     type Output = BitBoard;
     
+    #[inline]
     fn shl(self, rhs: u32) -> BitBoard {
         BitBoard(self.0 << rhs)
     }
@@ -71,18 +75,21 @@ impl Shl<u32> for BitBoard {
 impl Not for BitBoard {
     type Output = BitBoard;
 
+    #[inline]
     fn not(self) -> BitBoard {
         BitBoard(!self.0)
     }
 }
 
 impl std::ops::ShlAssign<u32> for BitBoard {
+    #[inline]
     fn shl_assign(&mut self, rhs: u32) {
         self.0 <<= rhs;
     }
 }
 
 impl std::ops::ShrAssign<u32> for BitBoard {
+    #[inline]
     fn shr_assign(&mut self, rhs: u32) {
         self.0 >>= rhs;
     }
@@ -91,6 +98,7 @@ impl std::ops::ShrAssign<u32> for BitBoard {
 impl Iterator for BitBoard {
     type Item = Square;
 
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         if self.0 == 0 {
             return None;

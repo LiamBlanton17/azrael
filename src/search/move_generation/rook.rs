@@ -1,8 +1,10 @@
-use crate::search::move_generation::{generate_ray_moves, ray_can_attack_sq};
+use crate::search::magics::rook::get_rook_moves;
+use crate::search::move_generation::push_move;
+use crate::types::bidboard::BitBoard;
 use crate::types::color::Color;
 use crate::types::piece::Piece;
 use crate::types::position::Position;
-use crate::types::chess_move;
+use crate::types::chess_move::{self, MOVE_FLAG_NONE};
 use crate::types::square::Square;
 use super::MoveGenLevel;
 
@@ -13,27 +15,32 @@ impl Position {
         let rooks = self.get_friendly_piece(Piece::Rook);
         let friendly = self.get_friendly_pieces();
         let enemy = self.get_enemy_pieces();
+        let occupancy = friendly | enemy;
 
         for rook in rooks {
-            generate_ray_moves(8, rook, friendly, enemy, level, move_stack); // Up
-            generate_ray_moves(-8, rook, friendly, enemy, level, move_stack); // Down
-            generate_ray_moves(-1, rook, friendly, enemy, level, move_stack); // Left
-            generate_ray_moves(1, rook, friendly, enemy, level, move_stack); // Right
-        }  
+            let moves = get_rook_moves(rook, occupancy) & !friendly;
+            let targets = match level {
+                MoveGenLevel::All => moves,
+                MoveGenLevel::Captures => moves & enemy,
+                MoveGenLevel::Quiets => moves & !enemy,
+            };
+
+            for to in targets {
+                push_move(move_stack, to, rook, MOVE_FLAG_NONE, Piece::Knight);
+            }
+        }
     }
 
     // Returns true if rook for the color given can capture the square give
     pub fn is_square_underattack_by_rook(&self, sq: Square, c: Color) -> bool {
         let rooks = self.get_piece(Piece::Rook, c);
-        let friendly = self.get_friendly_pieces();
-        let enemy = self.get_enemy_pieces();
-        
+        let occupancy = self.get_all_pieces();
+
         for rook in rooks {
-            if ray_can_attack_sq(8, rook, sq, friendly, enemy) { return true; } // Up 
-            if ray_can_attack_sq(-8, rook, sq, friendly, enemy) { return true; } // Down
-            if ray_can_attack_sq(-1, rook, sq, friendly, enemy) { return true; } // Left
-            if ray_can_attack_sq(1, rook, sq, friendly, enemy) { return true; } // Right
-        }  
+            if get_rook_moves(rook, occupancy) & sq.to_bitboard() != BitBoard(0) {
+                return true;
+            }
+        }
 
         false
     }

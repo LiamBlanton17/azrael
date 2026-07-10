@@ -1,8 +1,11 @@
-use crate::search::move_generation::{generate_ray_moves, ray_can_attack_sq};
+use crate::search::magics::bishop::get_bishop_moves;
+use crate::search::magics::rook::get_rook_moves;
+use crate::search::move_generation::push_move;
+use crate::types::bidboard::BitBoard;
 use crate::types::color::Color;
 use crate::types::piece::Piece;
 use crate::types::position::Position;
-use crate::types::chess_move;
+use crate::types::chess_move::{self, MOVE_FLAG_NONE};
 use crate::types::square::Square;
 use super::MoveGenLevel;
 
@@ -13,35 +16,33 @@ impl Position {
         let queens = self.get_friendly_piece(Piece::Queen);
         let friendly = self.get_friendly_pieces();
         let enemy = self.get_enemy_pieces();
+        let occupancy = friendly | enemy;
 
         for queen in queens {
-            generate_ray_moves(9, queen, friendly, enemy, level, move_stack); // Up right
-            generate_ray_moves(-7, queen, friendly, enemy, level, move_stack); // Down Right
-            generate_ray_moves(-9, queen, friendly, enemy, level, move_stack); // Down Left
-            generate_ray_moves(7, queen, friendly, enemy, level, move_stack); // Up Left
-            generate_ray_moves(8, queen, friendly, enemy, level, move_stack); // Up
-            generate_ray_moves(-8, queen, friendly, enemy, level, move_stack); // Down
-            generate_ray_moves(-1, queen, friendly, enemy, level, move_stack); // Left
-            generate_ray_moves(1, queen, friendly, enemy, level, move_stack); // Right
-        } 
+            let moves = (get_rook_moves(queen, occupancy) | get_bishop_moves(queen, occupancy)) & !friendly;
+            let targets = match level {
+                MoveGenLevel::All => moves,
+                MoveGenLevel::Captures => moves & enemy,
+                MoveGenLevel::Quiets => moves & !enemy,
+            };
+
+            for to in targets {
+                push_move(move_stack, to, queen, MOVE_FLAG_NONE, Piece::Knight);
+            }
+        }
     }
 
     // Returns true if queen for the color given can capture the square give
     pub fn is_square_underattack_by_queen(&self, sq: Square, c: Color) -> bool {
         let queens = self.get_piece(Piece::Queen, c);
-        let friendly = self.get_friendly_pieces();
-        let enemy = self.get_enemy_pieces();
+        let occupancy = self.get_all_pieces();
 
         for queen in queens {
-            if ray_can_attack_sq(9, queen, sq, friendly, enemy) { return true; } // Up right
-            if ray_can_attack_sq(-7, queen, sq, friendly, enemy) { return true; } // Down Right
-            if ray_can_attack_sq(-9, queen, sq, friendly, enemy) { return true; } // Down Left
-            if ray_can_attack_sq(7, queen, sq, friendly, enemy) { return true; } // Up Left
-            if ray_can_attack_sq(8, queen, sq, friendly, enemy) { return true; } // Up
-            if ray_can_attack_sq(-8, queen, sq, friendly, enemy) { return true; } // Down
-            if ray_can_attack_sq(-1, queen, sq, friendly, enemy) { return true; } // Left
-            if ray_can_attack_sq(1, queen, sq, friendly, enemy) { return true; } // Right
-        } 
+            let moves = get_rook_moves(queen, occupancy) | get_bishop_moves(queen, occupancy);
+            if moves & sq.to_bitboard() != BitBoard(0) {
+                return true;
+            }
+        }
 
         false
     }

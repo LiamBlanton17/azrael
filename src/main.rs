@@ -8,6 +8,8 @@ use types::position::Position;
 use types::chess_move::Move;
 use search::move_generation::MoveGenLevel;
 
+use crate::search::magics::bishop::init_bishop_magic;
+use crate::search::magics::rook::init_rook_magic;
 use crate::state::zobrist::init_zobrist;
 use crate::types::position::ZobristHash;
 
@@ -21,8 +23,10 @@ fn main() {
 // It also provides a best test of raw nodes per second the engine can do, without any other overhead than raw search
 pub fn perf_test() {
 
-    // must init the zobrist tables
+    // must init the zobrist tables and the rook/bishop magic lookup tables
     init_zobrist();
+    init_rook_magic();
+    init_bishop_magic();
 
     // recursive search for counting visited notes
     fn count_nodes_visited(p: &mut Position, move_stack: &mut Vec<Vec<Move>>, history: &mut Vec<ZobristHash>, depth: usize) -> u64 {
@@ -56,13 +60,14 @@ pub fn perf_test() {
     }
 
     // Define tuples for perf_test (name, depth, position, target)
+    // https://www.chessprogramming.org/Perft_Results
     let tests = [
         ("Starting Position", 6, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", 119_060_324),
         ("Kiwipete", 5, "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1", 193_690_690),
         ("Rook Pawn Endgame", 7, "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1", 178_633_661),
         ("Chaos", 6, "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1", 706_045_033),
         ("Engine Killer", 5, "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8", 89_941_194),
-        ("Standard Vibes", 6, "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10", 6_923_051_137),
+        ("Standard Vibes", 5, "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10", 164_075_551),
     ];
 
     let mut passed = true;
