@@ -1,4 +1,4 @@
-use crate::{types::{bidboard::BitBoard, chess_move::{self, Move, UnMove, split_move}, color::Color, piece::Piece, position::{self, Position, ZobristHash}, square::{self, Square}}};
+use crate::{search::magics::{bishop::get_bishop_moves, rook::get_rook_moves}, types::{bidboard::BitBoard, chess_move::{self, Move, UnMove, split_move}, color::Color, piece::Piece, position::{self, Position, ZobristHash}, square::{self, Square}}};
 
 impl Position {
 
@@ -35,12 +35,17 @@ impl Position {
     #[inline]
     pub fn is_square_underattack(&self, sq: Square) -> bool {
         let c = !self.turn;
+
+        // check non-sliding pieces
         if self.is_square_underattack_by_pawn(sq, c) { return true; }
         if self.is_square_underattack_by_knight(sq, c) { return true; }
         if self.is_square_underattack_by_king(sq, c) { return true; }
-        if self.is_square_underattack_by_bishop(sq, c) { return true; }
-        if self.is_square_underattack_by_rook(sq, c) { return true; }
-        if self.is_square_underattack_by_queen(sq, c) { return true; }
+
+        // now check sliding pieces
+        let occ = self.get_all_pieces();
+        let queens = self.get_piece(Piece::Queen, c);
+        if get_bishop_moves(sq, occ) & (self.get_piece(Piece::Bishop, c) | queens) != BitBoard(0) { return true; }
+        if get_rook_moves(sq, occ)   & (self.get_piece(Piece::Rook, c)   | queens) != BitBoard(0) { return true; }
         false
     }
 
