@@ -12,58 +12,29 @@ impl Position {
 
     // Returns pseudo-legal moves
     pub fn generate_knight_moves(&self, move_stack: &mut Vec<chess_move::Move>, level: MoveGenLevel) {
-        match level {
-            MoveGenLevel::Captures => generate_knight_captures(self, move_stack),
-            MoveGenLevel::All => {
-                generate_knight_captures(self, move_stack);
-                generate_knight_quiets(self, move_stack);
-            },
-            MoveGenLevel::Quiets => generate_knight_quiets(self, move_stack),
+        let knights = self.get_friendly_piece(Piece::Knight);
+        let friendly = self.get_friendly_pieces();
+        let enemy = self.get_enemy_pieces();
+
+        for knight in knights {
+            let moves = unsafe { KNIGHT_MOVES[knight.idx()] } & !friendly;
+            let targets = match level {
+                MoveGenLevel::All => moves,
+                MoveGenLevel::Captures => moves & enemy,
+                MoveGenLevel::Quiets => moves & !enemy,
+            };
+
+            for to in targets {
+                push_move(move_stack, to, knight, chess_move::MOVE_FLAG_NONE, Piece::Knight);
+            }
         }
     }
-
 
     // Returns true if knight for the color given can capture the square give
     pub fn is_square_underattack_by_knight(&self, sq: Square, c: Color) -> bool {
-        // Get the bitboards for the knights
         let knights: BitBoard = self.get_piece(Piece::Knight, c);
-
-        // Generate the bitboard for the attacks
-        unsafe {
-            let moves: BitBoard = KNIGHT_MOVES[sq.idx()];
-            moves & knights != BitBoard(0)
-        }
-
+        unsafe { KNIGHT_MOVES[sq.idx()] & knights != BitBoard(0) }
     }
 
-}
-
-fn generate_knight_captures(p: &Position, move_stack: &mut Vec<chess_move::Move>) {
-    let knights = p.get_friendly_piece(Piece::Knight);
-    let enemy = p.get_enemy_pieces();
-
-    for knight in knights {
-        unsafe {
-            let attacks = enemy & KNIGHT_MOVES[knight.idx()];
-            for to in attacks {
-                push_move(move_stack, to, knight, chess_move::MOVE_FLAG_NONE, Piece::Knight);
-            }
-        }
-    }
-}
-
-fn generate_knight_quiets(p: &Position, move_stack: &mut Vec<chess_move::Move>) {
-    let knights = p.get_friendly_piece(Piece::Knight);
-    let pieces = p.get_all_pieces();
-
-    for knight in knights {
-        unsafe {
-            let attacks = !pieces & KNIGHT_MOVES[knight.idx()];
-
-            for to in attacks {
-                push_move(move_stack, to, knight, chess_move::MOVE_FLAG_NONE, Piece::Knight);
-            }
-        }
-    }
 }
 
