@@ -7,9 +7,11 @@ mod search;
 use types::position::Position;
 use types::chess_move::Move;
 use search::move_generation::MoveGenLevel;
+use search::move_generation::init_knight_moves;
 
 use crate::search::magics::bishop::init_bishop_magic;
 use crate::search::magics::rook::init_rook_magic;
+use crate::search::move_generation::init_king_moves;
 use crate::state::zobrist::init_zobrist;
 use crate::types::position::ZobristHash;
 
@@ -23,10 +25,13 @@ fn main() {
 // It also provides a best test of raw nodes per second the engine can do, without any other overhead than raw search
 pub fn perf_test() {
 
-    // must init the zobrist tables and the rook/bishop magic lookup tables
+    // must init the zobrist tables, the rook/bishop magic tables, and the other piece tables
     init_zobrist();
     init_rook_magic();
     init_bishop_magic();
+    init_knight_moves();
+    init_king_moves();
+    init_king_moves();
 
     // recursive search for counting visited notes
     fn count_nodes_visited(p: &mut Position, move_stack: &mut Vec<Vec<Move>>, history: &mut Vec<ZobristHash>, depth: usize) -> u64 {

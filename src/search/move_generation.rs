@@ -6,6 +6,7 @@ mod rook;
 mod queen;
 mod king;
 
+use crate::types::bidboard::BitBoard;
 use crate::types::{color, piece};
 use crate::types::piece::Piece;
 use crate::types::position::Position;
@@ -70,5 +71,50 @@ fn push_pawn_move(move_stack: &mut Vec<chess_move::Move>, to: Square, flag: Move
         push_move(move_stack, to, from, MOVE_FLAG_PROMO, piece::Piece::Bishop);
         push_move(move_stack, to, from, MOVE_FLAG_PROMO, piece::Piece::Rook);
         push_move(move_stack, to, from, MOVE_FLAG_PROMO, piece::Piece::Queen);
+    }
+}
+
+// initialize the knight/king move lookup tables
+const NOT_A_FILE: BitBoard = BitBoard(0xFEFEFEFEFEFEFEFE);
+const NOT_B_FILE: BitBoard = BitBoard(0xFDFDFDFDFDFDFDFD);
+const NOT_G_FILE: BitBoard = BitBoard(0xBFBFBFBFBFBFBFBF);
+const NOT_H_FILE: BitBoard = BitBoard(0x7F7F7F7F7F7F7F7F);
+
+static mut KNIGHT_MOVES: [BitBoard; 64] = [BitBoard(0); 64];
+static mut KING_MOVES: [BitBoard; 64] = [BitBoard(0); 64];
+
+pub fn init_knight_moves() {
+    for i in 0..64 {
+        let bb = Square(i as u8).to_bitboard();
+        unsafe {
+            KNIGHT_MOVES[i] =
+                ((bb << 17) & NOT_A_FILE) |                  // 2 UP, 1 RIGHT
+                ((bb << 10) & NOT_A_FILE & NOT_B_FILE) |     // 1 UP, 2 RIGHT
+                ((bb >> 6) & NOT_A_FILE & NOT_B_FILE) |      // 1 DOWN, 2 RIGHT
+                ((bb >> 15) & NOT_A_FILE) |                  // 2 DOWN, 1 RIGHT
+                ((bb << 15) & NOT_H_FILE) |                  // 2 UP, 1 LEFT
+                ((bb << 6) & NOT_H_FILE & NOT_G_FILE) |      // 1 UP, 2 LEFT
+                ((bb >> 10) & NOT_H_FILE & NOT_G_FILE) |     // 1 DOWN, 2 LEFT
+                ((bb >> 17) & NOT_H_FILE)                    // 2 DOWN, 1 LEFT
+            ;
+        }
+    }
+}
+
+pub fn init_king_moves() {
+    for i in 0..64 {
+        let bb = Square(i as u8).to_bitboard();
+        unsafe {
+            KING_MOVES[i] =
+                (bb << 8) |                   // north
+                (bb >> 8) |                   // south
+                ((bb << 1) & NOT_A_FILE) |    // east
+                ((bb >> 1) & NOT_H_FILE) |    // west
+                ((bb << 9) & NOT_A_FILE) |    // north-east
+                ((bb << 7) & NOT_H_FILE) |    // north-west
+                ((bb >> 7) & NOT_A_FILE) |    // south-east
+                ((bb >> 9) & NOT_H_FILE)      // south-west
+            ;
+        }
     }
 }

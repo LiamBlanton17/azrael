@@ -1,3 +1,4 @@
+use crate::search::move_generation::KING_MOVES;
 use crate::search::move_generation::push_move;
 use crate::types::bidboard::BitBoard;
 use crate::types::color::Color;
@@ -28,48 +29,27 @@ impl Position {
         let king: BitBoard = self.get_piece(Piece::King, c);
 
         // Generate the bitboard for the attacks
-        let attacks =
-            (king << 8) |                   // north
-            (king >> 8) |                   // south
-            ((king << 1) & NOT_H_FILE) |    // east
-            ((king >> 1) & NOT_A_FILE) |    // west
-            ((king << 9) & NOT_H_FILE) |    // north-east
-            ((king << 7) & NOT_A_FILE) |    // north-west
-            ((king >> 7) & NOT_H_FILE) |    // south-east
-            ((king >> 9) & NOT_A_FILE);     // south-west
-            
-
-        // Check if any attack can see the square
-        attacks & sq.to_bitboard() != BitBoard(0)
+        unsafe {
+            let moves = KING_MOVES[sq.idx()]; 
+            moves & king != BitBoard(0)
+        }
     }
 
 }
-
-const NOT_A_FILE: BitBoard = BitBoard(0x7F7F7F7F7F7F7F7F);
-const NOT_H_FILE: BitBoard = BitBoard(0xFEFEFEFEFEFEFEFE);
 
 pub fn generate_king_captures(p: &Position, move_stack: &mut Vec<chess_move::Move>) {
     let king = p.get_friendly_piece(Piece::King);
     let king_sq = king.lsb_as_square();
     let enemy = p.get_enemy_pieces();
 
-    // TODO: precompute this and look it up for both captures and quiets
-    let attacks = enemy & (
-        (king << 8) |                   // north
-        (king >> 8) |                   // south
-        ((king << 1) & NOT_H_FILE) |    // east
-        ((king >> 1) & NOT_A_FILE) |    // west
-        ((king << 9) & NOT_H_FILE) |    // north-east
-        ((king << 7) & NOT_A_FILE) |    // north-west
-        ((king >> 7) & NOT_H_FILE) |    // south-east
-        ((king >> 9) & NOT_A_FILE)      // south-west
-    );
+    unsafe {
+        let attacks = enemy & KING_MOVES[king_sq.idx()];
 
-    // Add all the attacks to the move stack
-    for to in attacks {
-        push_move(move_stack, to, king_sq, chess_move::MOVE_FLAG_NONE, Piece::Knight);
+        // Add all the attacks to the move stack
+        for to in attacks {
+            push_move(move_stack, to, king_sq, chess_move::MOVE_FLAG_NONE, Piece::Knight);
+        }
     }
-
 }
 
 pub fn generate_king_quiets(p: &Position, move_stack: &mut Vec<chess_move::Move>) {
@@ -77,21 +57,13 @@ pub fn generate_king_quiets(p: &Position, move_stack: &mut Vec<chess_move::Move>
     let king_sq = king.lsb_as_square();
     let pieces = p.get_all_pieces();
 
-    // TODO: precompute this and look it up for both captures and quiets
-    let moves = !pieces & (
-        (king << 8) |                   // north
-        (king >> 8) |                   // south
-        ((king << 1) & NOT_H_FILE) |    // east
-        ((king >> 1) & NOT_A_FILE) |    // west
-        ((king << 9) & NOT_H_FILE) |    // north-east
-        ((king << 7) & NOT_A_FILE) |    // north-west
-        ((king >> 7) & NOT_H_FILE) |    // south-east
-        ((king >> 9) & NOT_A_FILE)      // south-west
-    );
+    unsafe {
+        let moves = !pieces & KING_MOVES[king_sq.idx()];
 
-    // Add all the moves to the move stack
-    for to in moves {
-        push_move(move_stack, to, king_sq, chess_move::MOVE_FLAG_NONE, Piece::Knight);
+        // Add all the moves to the move stack
+        for to in moves {
+            push_move(move_stack, to, king_sq, chess_move::MOVE_FLAG_NONE, Piece::Knight);
+        }
     }
 
     // Add castling moves if possible
