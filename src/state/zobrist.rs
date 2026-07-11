@@ -2,6 +2,7 @@ use crate::types::color::Color;
 use crate::types::piece::Piece;
 use crate::types::position::{Position, ZobristHash};
 use crate::types::square::Square;
+
 use rand::{Rng, SeedableRng};
 use rand::rngs::StdRng;
 

@@ -1,4 +1,6 @@
-use crate::search::move_generation::KING_MOVES;
+use super::MoveGenLevel;
+use super::KING_MOVES;
+
 use crate::search::move_generation::push_move;
 use crate::types::bidboard::BitBoard;
 use crate::types::color::Color;
@@ -7,7 +9,6 @@ use crate::types::position::Position;
 use crate::types::chess_move;
 use crate::types::square;
 use crate::types::square::Square;
-use super::MoveGenLevel;
 
 impl Position {
 

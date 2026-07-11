@@ -1,9 +1,10 @@
+use super::MoveGenLevel;
+
 use crate::search::magics::rook::get_rook_moves;
 use crate::search::move_generation::push_move;
 use crate::types::piece::Piece;
 use crate::types::position::Position;
 use crate::types::chess_move::{self, MOVE_FLAG_NONE};
-use super::MoveGenLevel;
 
 impl Position {
 

@@ -1,10 +1,10 @@
-use rand::Rng;
-use rand::rngs::StdRng;
+pub mod bishop;
+pub mod rook;
 
 use crate::types::bidboard::BitBoard;
 
-pub mod bishop;
-pub mod rook;
+use rand::Rng;
+use rand::rngs::StdRng;
 
 const MASTER_MAGIC_KEY: u64 = 0x1340_9F00_7600_0000;
 

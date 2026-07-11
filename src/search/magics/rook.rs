@@ -1,8 +1,8 @@
-use rand::SeedableRng;
-use rand::rngs::StdRng;
-
 use crate::search::magics::{MASTER_MAGIC_KEY, find_magic};
 use crate::types::{bidboard::BitBoard, square::Square};
+
+use rand::rngs::StdRng;
+use rand::SeedableRng;
 
 static mut ROOK_MASK: [BitBoard; 64] = [BitBoard(0); 64];
 static mut ROOK_MAGIC: [u64; 64] = [0; 64];

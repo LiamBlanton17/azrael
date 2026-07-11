@@ -1,9 +1,9 @@
+use super::errors::FENErrors;
 
 use crate::types::position::{self, Position};
 use crate::types::color::Color;
 use crate::types::square::Square;
 use crate::types::piece::Piece;
-use super::errors::FENErrors;
 
 impl Position {
 

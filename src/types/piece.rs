@@ -1,6 +1,5 @@
 use crate::types::color::Color;
 
-
 // Piece type enum
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 #[repr(u8)]

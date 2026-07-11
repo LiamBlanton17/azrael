@@ -1,3 +1,5 @@
+use super::MoveGenLevel;
+
 use crate::search::move_generation::push_pawn_move;
 use crate::types::bidboard::BitBoard;
 use crate::types::chess_move;
@@ -5,7 +7,6 @@ use crate::types::piece::Piece;
 use crate::types::position::Position;
 use crate::types::color::{self, Color};
 use crate::types::square::Square;
-use super::MoveGenLevel;
 
 impl Position {
 

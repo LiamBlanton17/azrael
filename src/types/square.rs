@@ -4,6 +4,7 @@ use super::bidboard::BitBoard;
 #[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub struct Square(pub u8);
 
+// Square constants
 pub const A1: Square = Square(0);
 pub const B1: Square = Square(1);
 pub const C1: Square = Square(2);
@@ -65,6 +66,7 @@ impl Square {
         Some(Square::from_row_col(row, col))
     }  
 
+    #[inline]
     pub fn is_valid_enpassant_square(self) -> bool {
         let (row, _) = self.to_row_col();
         row == 1 || row == 6
@@ -85,6 +87,7 @@ impl Square {
 impl std::ops::Sub<u8> for Square {
     type Output = Square;
 
+    #[inline]
     fn sub(self, rhs: u8) -> Square {
         Square(self.0 - rhs)
     }
@@ -93,12 +96,15 @@ impl std::ops::Sub<u8> for Square {
 impl std::ops::Add<u8> for Square {
     type Output = Square;
 
+    #[inline]
     fn add(self, rhs: u8) -> Square {
         Square(self.0 + rhs)
     }
 }
 
 impl std::ops::AddAssign<u8> for Square {
+    
+    #[inline]
     fn add_assign(&mut self, rhs: u8) {
         self.0 += rhs
     }

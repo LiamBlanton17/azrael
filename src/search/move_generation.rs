@@ -1,4 +1,3 @@
-
 mod pawn;
 mod knight;
 mod bishop;
@@ -7,8 +6,8 @@ mod queen;
 mod king;
 
 use crate::types::bidboard::BitBoard;
-use crate::types::{color, piece};
-use crate::types::piece::Piece;
+use crate::types::color;
+use crate::types::piece::{self, Piece};
 use crate::types::position::Position;
 use crate::types::chess_move::{self, MOVE_FLAG_PROMO, Move};
 use crate::types::square::Square;

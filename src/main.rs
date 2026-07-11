@@ -4,16 +4,14 @@ mod interface;
 mod state;
 mod search;
 
-use types::position::Position;
+use types::position::{Position, ZobristHash};
 use types::chess_move::Move;
-use search::move_generation::MoveGenLevel;
-use search::move_generation::init_knight_moves;
 
-use crate::search::magics::bishop::init_bishop_magic;
-use crate::search::magics::rook::init_rook_magic;
-use crate::search::move_generation::init_king_moves;
-use crate::state::zobrist::init_zobrist;
-use crate::types::position::ZobristHash;
+use state::zobrist::init_zobrist;
+
+use search::move_generation::{MoveGenLevel, init_king_moves, init_knight_moves};
+use search::magics::bishop::init_bishop_magic;
+use search::magics::rook::init_rook_magic;
 
 use std::time::Instant;
 

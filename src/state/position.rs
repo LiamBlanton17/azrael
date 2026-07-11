@@ -1,4 +1,11 @@
-use crate::{search::magics::{bishop::get_bishop_moves, rook::get_rook_moves}, types::{bidboard::BitBoard, chess_move::{self, Move, UnMove, split_move}, color::Color, piece::Piece, position::{self, Position, ZobristHash}, square::{self, Square}}};
+use crate::types::bidboard::BitBoard;
+use crate::types::chess_move::{self, Move, UnMove, split_move};
+use crate::types::color::Color;
+use crate::types::piece::Piece;
+use crate::types::position::{self, Position, ZobristHash};
+use crate::types::square::{self, Square};
+use crate::search::magics::bishop::get_bishop_moves;
+use crate::search::magics::rook::get_rook_moves;
 
 impl Position {
 
@@ -352,7 +359,8 @@ impl Position {
 
     pub fn is_three_fold(&self, history: &Vec<ZobristHash>) -> bool {
         let mut count = 0;
-        for h in history {
+        // Most likely to find matches in a reverse history, and only every other (same turn)
+        for h in history.iter().rev().skip(1).step_by(2) {
             if *h == self.zobrist {
                 count += 1;
                 if count == 3 {

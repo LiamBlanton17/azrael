@@ -1,9 +1,8 @@
-
-use crate::types::piece::Piece;
-
 use super::bidboard::BitBoard;
 use super::color::Color;
 use super::square;
+
+use crate::types::piece::Piece;
 
 // Type aliasing u64 to Zobrist hash
 pub type ZobristHash = u64;

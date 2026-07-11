@@ -1,6 +1,5 @@
 use crate::types::{piece::Piece, square::Square};
 
-
 // Unmove type
 pub struct UnMove {
     pub en_passant: Option<Square>,
@@ -33,6 +32,7 @@ pub const MOVE_FLAG_ENPASSANT: Move = 0b01;
 pub const MOVE_FLAG_CASTLE: Move = 0b10;
 pub const MOVE_FLAG_PROMO: Move = 0b11;
 
+#[inline]
 pub fn split_move(m: Move) -> (Square, Square, Piece, Move) {
     let flag = (m & MOVE_FLAG) >> FLAG_SHIFT;
 

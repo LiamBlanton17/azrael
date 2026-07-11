@@ -1,3 +1,6 @@
+use super::MoveGenLevel;
+use super::KNIGHT_MOVES;
+
 use crate::search::move_generation::push_move;
 use crate::types::bidboard::BitBoard;
 use crate::types::color::Color;
@@ -5,8 +8,6 @@ use crate::types::piece::Piece;
 use crate::types::position::Position;
 use crate::types::chess_move;
 use crate::types::square::Square;
-use super::MoveGenLevel;
-use super::KNIGHT_MOVES;
 
 impl Position {
 
