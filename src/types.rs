@@ -4,3 +4,4 @@ pub mod position;
 pub mod square;
 pub mod bidboard;
 pub mod color;
+pub mod eval;
