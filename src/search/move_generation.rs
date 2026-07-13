@@ -29,6 +29,16 @@ impl Position {
     pub fn new_move_stack() -> Vec<chess_move::Move> {
         Vec::with_capacity(MAX_MOVES_IN_POSITION)
     }
+}
+
+#[inline]
+pub fn ensure_move_stack_len(move_stack: &mut Vec<Vec<Move>>, ply: usize) {
+    while move_stack.len() <= ply {
+        move_stack.push(Position::new_move_stack());
+    }
+}
+
+impl Position {
 
     // Public function to call to generate moves for a position
     pub fn generate_moves(&self, move_stack: &mut Vec<chess_move::Move>, level: MoveGenLevel) {

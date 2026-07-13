@@ -1,4 +1,4 @@
-use crate::{search::move_generation::MoveGenLevel, types::{chess_move::Move, eval::Eval, position::{Position, ZobristHash}}};
+use crate::{search::move_generation::{ensure_move_stack_len, MoveGenLevel}, types::{chess_move::Move, eval::Eval, position::{Position, ZobristHash}}};
 
 
 
@@ -24,14 +24,16 @@ pub fn quiescence(
     }
 
     // only generate and check captures
-    p.generate_moves(&mut move_stack[ply as usize], MoveGenLevel::Captures);
-    let num_moves = move_stack[ply as usize].len();
+    let move_stack_idx = ply as usize;
+    ensure_move_stack_len(move_stack, move_stack_idx);
+    p.generate_moves(&mut move_stack[move_stack_idx], MoveGenLevel::Captures);
+    let num_moves = move_stack[move_stack_idx].len();
 
     let mut nodes = 1;
     let mut best_eval = stand_pat;
     let mut best_move = 0;
     for i in 0..num_moves {
-        let m = move_stack[ply as usize][i];
+        let m = move_stack[move_stack_idx][i];
 
         let um = p.make_move(m);
         let is_legal_move = !p.can_kill_king();

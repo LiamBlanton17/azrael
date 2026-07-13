@@ -1,4 +1,4 @@
-use crate::search::move_generation::MoveGenLevel;
+use crate::search::move_generation::{ensure_move_stack_len, MoveGenLevel};
 use crate::search::quiescence::quiescence;
 use crate::types::chess_move::Move;
 use crate::types::eval::{self, Eval, MATE};
@@ -17,8 +17,10 @@ pub fn negamax(
         return quiescence(p, ply, alpha, beta, move_stack, history)
     }
 
-    p.generate_moves(&mut move_stack[depth], MoveGenLevel::All);
-    let num_moves = move_stack[depth].len();
+    let move_stack_idx = ply as usize;
+    ensure_move_stack_len(move_stack, move_stack_idx);
+    p.generate_moves(&mut move_stack[move_stack_idx], MoveGenLevel::All);
+    let num_moves = move_stack[move_stack_idx].len();
 
     history.push(p.zobrist);
 
@@ -28,7 +30,7 @@ pub fn negamax(
     let mut best_move = 0;
     let mut found_legal_move = false;
     for i in 0..num_moves {
-        let m = move_stack[depth][i];
+        let m = move_stack[move_stack_idx][i];
 
         // play and make sure this is a legal move
         let um = p.make_move(m);
@@ -44,7 +46,7 @@ pub fn negamax(
             nodes += n;
             if e > best_eval {
                 best_eval = e;
-                best_move = move_stack[depth][i];
+                best_move = m;
             }
             if best_eval > alpha {
                 alpha = best_eval;
