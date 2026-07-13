@@ -11,9 +11,9 @@ pub fn negamax(
     beta: Eval, 
     move_stack: &mut Vec<Vec<Move>>, 
     history: &mut Vec<ZobristHash>
-) -> (Eval, Move) {
+) -> (Eval, Move, u64) {
     if depth == 0 {
-        return (p.eval_relative(), 0);
+        return (p.eval_relative(), 0, 1);
     }
 
     p.generate_moves(&mut move_stack[depth], MoveGenLevel::All);
@@ -22,6 +22,7 @@ pub fn negamax(
     history.push(p.zobrist);
 
     // recursive negamax search
+    let mut nodes = 0;
     let mut best_eval = eval::MIN_EVAL;
     let mut best_move = 0;
     let mut found_legal_move = false;
@@ -33,11 +34,13 @@ pub fn negamax(
         let is_legal_move = !p.can_kill_king();
         if is_legal_move {
             found_legal_move = true;
-            let e = if p.is_fifty_move_rule() || p.is_three_fold(history) {
-                0
+            let (e, n) = if p.is_fifty_move_rule() || p.is_three_fold(history) {
+                (0, 0)
             } else {
-                -negamax(p, depth - 1, ply + 1, -beta, -alpha, move_stack, history).0
+                let (e, _, n) = negamax(p, depth - 1, ply + 1, -beta, -alpha, move_stack, history);
+                (-e, n)
             };
+            nodes += n;
             if e > best_eval {
                 best_eval = e;
                 best_move = move_stack[depth][i];
@@ -60,12 +63,12 @@ pub fn negamax(
         let in_check = p.can_kill_king();
         p.turn = p.turn.flip();
         if in_check {
-            (-MATE + ply, 0)
+            (-MATE + ply, 0, nodes)
         } else {
-            (0, 0)
+            (0, 0, nodes)
         }
     } else {
-        (best_eval, best_move)
+        (best_eval, best_move, nodes)
     }
 
 }

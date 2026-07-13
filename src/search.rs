@@ -21,7 +21,7 @@ pub enum RootSearchType {
 impl Position {
 
     // https://www.chessprogramming.org/Iterative_Search
-    pub fn root_search(&mut self, search_type: RootSearchType) -> (Eval, Move) {
+    pub fn root_search(&mut self, search_type: RootSearchType) -> (Eval, Move, u64) {
         match search_type {
             RootSearchType::TimeLimited(budget) => time_search(self, budget),
             RootSearchType::DepthLimited(depth) => depth_search(self, depth),
@@ -31,26 +31,30 @@ impl Position {
 }
 
 // Main branch from root_search
-fn time_search(p: &mut Position, budget: Duration) -> (Eval, Move) {
+fn time_search(p: &mut Position, budget: Duration) -> (Eval, Move, u64) {
     unimplemented!("Time search not implemented yet")
 }
 
 // Main branch from root_search
-fn depth_search(p: &mut Position, depth: usize) -> (Eval, Move) {
+fn depth_search(p: &mut Position, depth: usize) -> (Eval, Move, u64) {
     let mut move_stack: Vec<Vec<Move>> = (0..=(depth + 1)).map(|_| Position::new_move_stack()).collect();
     let mut history: Vec<ZobristHash> = Vec::with_capacity(depth + 1);
 
     let mut best_eval = eval::MIN_EVAL;
     let mut best_move = 0;
+    let mut total_nodes = 0;
     for d in 1..=depth {
         // reset the history (move gen resets the move stack)
         history.clear();
 
         // negamax search to this depth
-        (best_eval, best_move) = negamax(p, d, 0, eval::MIN_EVAL, eval::MATE, &mut move_stack, &mut history);
+        let (e, m, n) = negamax(p, d, 0, eval::MIN_EVAL, eval::MATE, &mut move_stack, &mut history);
+        best_eval = e;
+        best_move = m;
+        total_nodes += n;
     }
 
-    (best_eval, best_move)
+    (best_eval, best_move, total_nodes)
 }
 
 // Must call this function for the engine to work

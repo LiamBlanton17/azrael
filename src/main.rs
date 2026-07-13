@@ -48,11 +48,12 @@ fn main() {
             match p {
                 Ok(mut p) => {
                     let start = Instant::now();
-                    let (e, m) = p.root_search(search_type);
+                    let (e, m, n) = p.root_search(search_type);
                     let duration = start.elapsed();
                     let (dest, orig, _, _) = split_move(m);
+                    let mnps = ((n as f64) / duration.as_secs_f64()) / 1_000_000.0;
                     println!("Move from {} to {}. Eval is: {}", dest, orig, e);
-                    println!("Found this move in {} ms", duration.as_millis());
+                    println!("Found this move in {} ms, searching {} nodes ({} MN/s)", duration.as_millis(), format_with_commas(n), mnps);
                 },
                 Err(e) => {
                     println!("Failed to parse FEN: ");
@@ -68,4 +69,16 @@ fn print_help() {
     println!("Must call with one of these arguments:");
     println!("'perft': run the perft test");
     println!("'search [fen] [search_type|'depth','time'] [time_ms|depth_ply]': return the best move and evaluation of the position");
+}
+
+fn format_with_commas(n: u64) -> String {
+    let s = n.to_string();
+    let mut result = String::new();
+    for (i, c) in s.chars().rev().enumerate() {
+        if i > 0 && i % 3 == 0 {
+            result.push(',');
+        }
+        result.push(c);
+    }
+    result.chars().rev().collect()
 }
