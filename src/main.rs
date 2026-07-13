@@ -3,9 +3,7 @@ mod eval;
 mod interface;
 mod state;
 mod search;
-mod perft;
-
-use perft::perf_test;
+mod tests;
 
 use std::time::{Duration, Instant};
 use std::env;
@@ -27,7 +25,8 @@ fn main() {
     let cmd: &str = &args[1];
 
     match cmd {
-        "perft" => perf_test(),
+        "perft" => tests::perf_test(),
+        "strneght" => tests::strength_test(),
         "search" => {
             if args_len < 5 {
                 print_help();
@@ -48,12 +47,12 @@ fn main() {
             match p {
                 Ok(mut p) => {
                     let start = Instant::now();
-                    let (e, m, n) = p.root_search(search_type);
+                    let (e, m, n, d) = p.root_search(search_type);
                     let duration = start.elapsed();
                     let (dest, orig, _, _) = split_move(m);
                     let mnps = ((n as f64) / duration.as_secs_f64()) / 1_000_000.0;
                     println!("Move from {} to {}. Eval is: {}", dest, orig, e);
-                    println!("Found this move in {} ms, searching {} nodes ({} MN/s)", duration.as_millis(), format_with_commas(n), mnps);
+                    println!("Found this move in {} ms, reached a depth of {}, searching {} nodes ({} MN/s)", duration.as_millis(), d, format_with_commas(n), mnps);
                 },
                 Err(e) => {
                     println!("Failed to parse FEN: ");
@@ -67,7 +66,8 @@ fn main() {
 
 fn print_help() {
     println!("Must call with one of these arguments:");
-    println!("'perft': run the perft test");
+    println!("'perft': run the perft test - do this EVERYTIME movegen is touched");
+    println!("'strength': run the strength test - a comprehensive battery of tests to determine if a change improved strength");
     println!("'search [fen] [search_type|'depth','time'] [time_ms|depth_ply]': return the best move and evaluation of the position");
 }
 

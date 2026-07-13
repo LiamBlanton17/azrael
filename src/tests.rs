@@ -81,3 +81,11 @@ pub fn perf_test() {
     }
 
 }
+
+
+// Used by the CLI to run a battery of tests
+// Bunch of different positions, for scores for the move determines for the position
+// Better score equals better moves found, and also will display node counts and efficiency
+pub fn strength_test() {
+
+}

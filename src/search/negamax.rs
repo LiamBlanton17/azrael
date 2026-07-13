@@ -1,4 +1,5 @@
 use crate::search::move_generation::MoveGenLevel;
+use crate::search::quiescence::quiescence;
 use crate::types::chess_move::Move;
 use crate::types::eval::{self, Eval, MATE};
 use crate::types::position::{Position, ZobristHash};
@@ -13,7 +14,7 @@ pub fn negamax(
     history: &mut Vec<ZobristHash>
 ) -> (Eval, Move, u64) {
     if depth == 0 {
-        return (p.eval_relative(), 0, 1);
+        return quiescence(p, ply, alpha, beta, move_stack, history)
     }
 
     p.generate_moves(&mut move_stack[depth], MoveGenLevel::All);
@@ -23,7 +24,7 @@ pub fn negamax(
 
     // recursive negamax search
     let mut nodes = 1;
-    let mut best_eval: i16 = eval::MIN_EVAL;
+    let mut best_eval = eval::MIN_EVAL;
     let mut best_move = 0;
     let mut found_legal_move = false;
     for i in 0..num_moves {
