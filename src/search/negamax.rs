@@ -22,8 +22,8 @@ pub fn negamax(
     history.push(p.zobrist);
 
     // recursive negamax search
-    let mut nodes = 0;
-    let mut best_eval = eval::MIN_EVAL;
+    let mut nodes = 1;
+    let mut best_eval: i16 = eval::MIN_EVAL;
     let mut best_move = 0;
     let mut found_legal_move = false;
     for i in 0..num_moves {
