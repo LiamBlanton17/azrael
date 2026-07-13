@@ -2,13 +2,16 @@ pub mod move_generation;
 pub mod magics;
 pub mod negamax;
 
+use crate::search::magics::bishop::init_bishop_magic;
+use crate::search::magics::rook::init_rook_magic;
+use crate::search::move_generation::{init_king_moves, init_knight_moves};
 use crate::search::negamax::negamax;
-use crate::types::color::Color;
+use crate::state::zobrist::init_zobrist;
 use crate::types::{chess_move::Move, position::ZobristHash};
-use crate::types::eval::{self, Eval, min_eval_for_color};
+use crate::types::eval::{self, Eval};
 use crate::types::position::Position;
 
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 pub enum RootSearchType {
     TimeLimited(Duration),
@@ -40,16 +43,22 @@ fn depth_search(p: &mut Position, depth: usize) -> (Eval, Move) {
     let mut best_eval = eval::MIN_EVAL;
     let mut best_move = 0;
     for d in 1..=depth {
-
         // reset the history (move gen resets the move stack)
         history.clear();
 
         // negamax search to this depth
-        let (e, m) = negamax(p, d, 0, &mut move_stack, &mut history);
-        best_eval = e;
-        best_move = m;
-        
+        (best_eval, best_move) = negamax(p, d, 0, eval::MIN_EVAL, eval::MATE, &mut move_stack, &mut history);
     }
 
     (best_eval, best_move)
+}
+
+// Must call this function for the engine to work
+pub fn init_engine() {
+    init_zobrist();
+    init_rook_magic();
+    init_bishop_magic();
+    init_rook_magic();
+    init_king_moves();
+    init_knight_moves();
 }

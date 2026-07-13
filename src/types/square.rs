@@ -109,3 +109,10 @@ impl std::ops::AddAssign<u8> for Square {
         self.0 += rhs
     }
 }
+
+impl std::fmt::Display for Square {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let (row, col) = self.to_row_col();
+        write!(f, "{}{}", (b'a' + col) as char, (b'1' + row) as char)
+    }
+}

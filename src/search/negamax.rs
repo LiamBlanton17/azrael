@@ -3,9 +3,15 @@ use crate::types::chess_move::Move;
 use crate::types::eval::{self, Eval, MATE};
 use crate::types::position::{Position, ZobristHash};
 
-const MATE_DEPTH_OFFSET: Eval = 100;
-
-pub fn negamax(p: &mut Position, depth: usize, ply: i16, move_stack: &mut Vec<Vec<Move>>, history: &mut Vec<ZobristHash>) -> (Eval, Move) {
+pub fn negamax(
+    p: &mut Position, 
+    depth: usize, 
+    ply: i16, 
+    mut alpha: Eval, 
+    beta: Eval, 
+    move_stack: &mut Vec<Vec<Move>>, 
+    history: &mut Vec<ZobristHash>
+) -> (Eval, Move) {
     if depth == 0 {
         return (p.eval_relative(), 0);
     }
@@ -30,14 +36,22 @@ pub fn negamax(p: &mut Position, depth: usize, ply: i16, move_stack: &mut Vec<Ve
             let e = if p.is_fifty_move_rule() || p.is_three_fold(history) {
                 0
             } else {
-                -negamax(p, depth - 1, ply + 1, move_stack, history).0
+                -negamax(p, depth - 1, ply + 1, -beta, -alpha, move_stack, history).0
             };
             if e > best_eval {
                 best_eval = e;
                 best_move = move_stack[depth][i];
             }
+            if best_eval > alpha {
+                alpha = best_eval;
+            }
         }
         p.unmake_move(um);
+
+        // alpha-beta cutoff
+        if alpha >= beta {
+            break;
+        }
     }
     history.pop();
 
