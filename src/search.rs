@@ -10,7 +10,7 @@ use crate::search::move_generation::{init_king_moves, init_knight_moves};
 use crate::search::negamax::negamax;
 use crate::state::zobrist::init_zobrist;
 use crate::types::{chess_move::Move, position::ZobristHash};
-use crate::types::eval::{self, Eval};
+use crate::types::eval::{Eval, MATE, MIN_EVAL};
 use crate::types::position::Position;
 
 use std::time::{Duration, Instant};
@@ -38,7 +38,7 @@ fn time_search(p: &mut Position, budget: Duration) -> (Eval, Move, u64, usize) {
     let mut move_stack: Vec<Vec<Move>> = (0..=TIME_SEARCH_EXPECTED_MAX_DEPTH).map(|_| Position::new_move_stack()).collect();
     let mut history: Vec<ZobristHash> = Vec::with_capacity(TIME_SEARCH_EXPECTED_MAX_DEPTH);
 
-    let mut best_eval = eval::MIN_EVAL;
+    let mut best_eval = MIN_EVAL;
     let mut best_move = 0;
     let mut total_nodes = 0;
 
@@ -52,7 +52,7 @@ fn time_search(p: &mut Position, budget: Duration) -> (Eval, Move, u64, usize) {
 
         // negamax search to this depth
         let last_search_start = Instant::now();
-        let (e, m, n) = negamax(p, depth, 0, eval::MIN_EVAL, eval::MATE, &mut move_stack, &mut history);
+        let (e, m, n) = negamax(p, depth, 0, MIN_EVAL, MATE, &mut move_stack, &mut history);
         last_search_time = last_search_start.elapsed();
         best_eval = e;
         best_move = m;
@@ -69,7 +69,7 @@ fn depth_search(p: &mut Position, depth: usize) -> (Eval, Move, u64, usize) {
     let mut move_stack: Vec<Vec<Move>> = (0..=(depth + 16)).map(|_| Position::new_move_stack()).collect();
     let mut history: Vec<ZobristHash> = Vec::with_capacity(depth + 16);
 
-    let mut best_eval = eval::MIN_EVAL;
+    let mut best_eval = MIN_EVAL;
     let mut best_move = 0;
     let mut total_nodes = 0;
     for d in 1..=depth {
@@ -77,7 +77,7 @@ fn depth_search(p: &mut Position, depth: usize) -> (Eval, Move, u64, usize) {
         history.clear();
 
         // negamax search to this depth
-        let (e, m, n) = negamax(p, d, 0, eval::MIN_EVAL, eval::MATE, &mut move_stack, &mut history);
+        let (e, m, n) = negamax(p, d, 0, MIN_EVAL, MATE, &mut move_stack, &mut history);
         best_eval = e;
         best_move = m;
         total_nodes += n;
