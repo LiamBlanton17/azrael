@@ -18,7 +18,7 @@ pub fn perf_test() {
 
         // generate the new moves for this position
         // using a 2d stack for moves to avoid any allocation on hot path
-        p.generate_moves(&mut move_stack[depth], MoveGenLevel::All);
+        p.generate_moves(&mut move_stack[depth], MoveGenLevel::All, false);
         let num_moves = move_stack[depth].len();
 
         // add zobrist of the position to history (to avoid 3-folds)
@@ -83,7 +83,7 @@ pub fn perf_test() {
 }
 
 // How deep the engine searches each strength-test position
-const STRENGTH_TEST_TIME: Duration = Duration::from_millis(250);
+const STRENGTH_TEST_TIME: Duration = Duration::from_millis(333);
 
 // Bnech mark test structs
 struct BenchmarkTestCandidate {
@@ -255,8 +255,8 @@ pub fn strength_test() {
     // print the results
     let mnps = ((total_nodes as f64) / total_search_duration.as_secs_f64()) / 1_000_000.0;
     println!("\nStrength Test Complete");
-    println!("Score: {}/{} ({:2}%)", total_score, max_score, total_score / max_score);
-    println!("Best moves found: {}/{} ({:2}%)", best_moves_found, tests_run, best_moves_found / tests_run);
+    println!("Score: {}/{} ({:.2})", total_score, max_score, total_score as f64 / max_score as f64);
+    println!("Best moves found: {}/{} ({:.2})", best_moves_found, tests_run, best_moves_found as f64 / tests_run as f64);
     println!("Search time: {:?}", total_search_duration);
     println!("Total nodes: {}", crate::format_with_commas(total_nodes));
     println!("MN/S: {:.2}\n", mnps);

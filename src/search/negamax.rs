@@ -19,7 +19,7 @@ pub fn negamax(
 
     let move_stack_idx = ply as usize;
     ensure_move_stack_len(move_stack, move_stack_idx);
-    p.generate_moves(&mut move_stack[move_stack_idx], MoveGenLevel::All);
+    p.generate_moves(&mut move_stack[move_stack_idx], MoveGenLevel::All, true);
     let num_moves = move_stack[move_stack_idx].len();
 
     history.push(p.zobrist);

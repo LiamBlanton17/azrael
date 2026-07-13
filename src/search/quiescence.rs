@@ -24,7 +24,7 @@ pub fn quiescence(
     // only generate and check captures
     let move_stack_idx = ply as usize;
     ensure_move_stack_len(move_stack, move_stack_idx);
-    p.generate_moves(&mut move_stack[move_stack_idx], MoveGenLevel::Captures);
+    p.generate_moves(&mut move_stack[move_stack_idx], MoveGenLevel::Captures, true);
     let num_moves = move_stack[move_stack_idx].len();
 
     let mut nodes = 1;

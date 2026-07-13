@@ -2,6 +2,7 @@ pub mod move_generation;
 pub mod magics;
 pub mod negamax;
 pub mod quiescence;
+pub mod move_ordering;
 
 use crate::search::magics::bishop::init_bishop_magic;
 use crate::search::magics::rook::init_rook_magic;

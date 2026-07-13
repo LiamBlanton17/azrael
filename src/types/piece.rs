@@ -1,4 +1,4 @@
-use crate::types::color::Color;
+use crate::{eval, types::{color::Color, eval::Eval}};
 
 // Piece type enum
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -43,6 +43,18 @@ impl Piece {
         match c {
             Color::White => ch.to_ascii_uppercase(),
             Color::Black => ch,
+        }
+    }
+
+    #[inline]
+    pub fn to_value(self) -> Eval {
+        match self {
+            Piece::Pawn => eval::PAWN,
+            Piece::Knight => eval::KNIGHT,
+            Piece::Bishop => eval::BISHOP,
+            Piece::Rook => eval::ROOK,
+            Piece::Queen => eval::QUEEN,
+            _ => 0,
         }
     }
 

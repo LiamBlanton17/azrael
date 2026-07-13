@@ -36,7 +36,7 @@ impl Position {
 
         // Generate pseudo-legal moves, then filter to legal ones as we scan for a match.
         let mut moves = Position::new_move_stack();
-        self.generate_moves(&mut moves, MoveGenLevel::All);
+        self.generate_moves(&mut moves, MoveGenLevel::All, false);
 
         for &m in &moves {
             

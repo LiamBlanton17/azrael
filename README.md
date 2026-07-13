@@ -35,8 +35,8 @@ A move, just like a board, needs to have as small as a memory footprint as possi
 When generating moves for the chess engine, it will be designed explicity from the start to allow generation of captures, non-captures, or both for each piece type and the position as a whole. This can dramatically speed up the engine, as we can position not generate a large portion of moves, where a capture causes a cutoff.
 
 ## Last Strength Test Run (7/13/2026)
-- Score: 1067/6770
-- Best moves found: 51/677
-- Search time: 507.0123717s
-- Total nodes: 11,497,840,224
-- MN/S: 22.68
+- Score: 1508/6770 (0.22)
+- Best moves found: 70/677 (0.10)
+- Search time: 164.1832056s
+- Total nodes: 2,633,785,017
+- MN/S: 16.04
