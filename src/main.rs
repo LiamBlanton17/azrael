@@ -26,7 +26,7 @@ fn main() {
 
     match cmd {
         "perft" => tests::perf_test(),
-        "strneght" => tests::strength_test(),
+        "strength" => tests::strength_test(),
         "search" => {
             if args_len < 5 {
                 print_help();
@@ -71,7 +71,7 @@ fn print_help() {
     println!("'search [fen] [search_type|'depth','time'] [time_ms|depth_ply]': return the best move and evaluation of the position");
 }
 
-fn format_with_commas(n: u64) -> String {
+pub fn format_with_commas(n: u64) -> String {
     let s = n.to_string();
     let mut result = String::new();
     for (i, c) in s.chars().rev().enumerate() {
