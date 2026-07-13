@@ -13,32 +13,25 @@ pub const QUEEN: Eval = 900;
 impl Position {
 
     pub fn eval(&self) -> Eval {
-
         let mut eval = 0;
-
-        // Count white pieces and material score
         for (p, e) in [
-            (Piece::Pawn, PAWN), 
+            (Piece::Pawn, PAWN),
             (Piece::Bishop, BISHOP),
             (Piece::Knight, KNIGHT),
             (Piece::Rook, ROOK),
             (Piece::Queen, QUEEN),
         ] {
             eval += self.get_piece(p, Color::White).0.count_ones() as i16 * e;
+            eval -= self.get_piece(p, Color::Black).0.count_ones() as i16 * e;
         }
-
-        // Count black pieces and material score
-        for (p, e) in [
-            (Piece::Pawn, PAWN), 
-            (Piece::Bishop, BISHOP),
-            (Piece::Knight, KNIGHT),
-            (Piece::Rook, ROOK),
-            (Piece::Queen, QUEEN),
-        ] {
-            eval -= self.get_piece(p, Color::White).0.count_ones() as i16 * e;
-        }
-
         eval
+    }
+
+    pub fn eval_relative(&self) -> Eval {
+        match self.turn  {
+            Color::White => self.eval(),
+            Color::Black => -self.eval(),
+        }
     }
 
 }

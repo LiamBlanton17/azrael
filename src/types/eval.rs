@@ -4,8 +4,8 @@ use crate::types::color::Color;
 pub type Eval = i16;
 
 // Define infinity scores
-const MIN_EVAL: Eval = -32_768;
-const MAX_EVAL: Eval = 32_767;
+pub const MIN_EVAL: Eval = -32_768;
+pub const MAX_EVAL: Eval = 32_767;
 
 // Defineing a match threshold
 pub const MATE: Eval = 32000;
@@ -24,3 +24,4 @@ pub fn min_eval_for_color(c: Color) -> Eval {
         Color::Black => MAX_EVAL,
     }
 }
+
