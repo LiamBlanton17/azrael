@@ -41,16 +41,18 @@ fn time_search(p: &mut Position, budget: Duration) -> (Eval, Move, u64, usize) {
     let mut best_move = 0;
     let mut total_nodes = 0;
 
-    // search as long as we have not used 50% of the budget
-    // todo: improve this time budget heuristic to check the estimated branching factor and last depth search time
-    let start = Instant::now();
+    // search as long as the estimated branching factor times the last search time is less than the remaining budget
+    const EBF: u32 = 5; // Estimated branching factor is 5, better move ordering/TTs will decrease this
+    let mut last_search_time = Duration::new(0, 0);
     let mut depth = 1;
-    while start.elapsed() * 2 < budget {
+    while last_search_time * EBF < budget {
         // reset the history (move gen resets the move stack)
         history.clear();
 
         // negamax search to this depth
+        let last_search_start = Instant::now();
         let (e, m, n) = negamax(p, depth, 0, eval::MIN_EVAL, eval::MATE, &mut move_stack, &mut history);
+        last_search_time = last_search_start.elapsed();
         best_eval = e;
         best_move = m;
         total_nodes += n;

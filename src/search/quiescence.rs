@@ -1,7 +1,5 @@
 use crate::{search::move_generation::{ensure_move_stack_len, MoveGenLevel}, types::{chess_move::Move, eval::Eval, position::{Position, ZobristHash}}};
 
-
-
 // quiescence search is basically just negamax but only looking at captures
 // also includes a standpat, which prevents bad captures from being forced
 pub fn quiescence(
