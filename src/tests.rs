@@ -82,9 +82,6 @@ pub fn perf_test() {
 
 }
 
-// How deep the engine searches each strength-test position
-const STRENGTH_TEST_TIME: Duration = Duration::from_millis(10);
-
 // Bnech mark test structs
 struct BenchmarkTestCandidate {
     mv: Move,
@@ -172,14 +169,27 @@ pub fn strength_test() {
         }
     };
 
-    let mut total_score = 0u32;
-    let mut total_nodes = 0;
+    // the time limits each position is searched at -- metrics are tracked separately per limit
+    const TIME_LIMITS: [Duration; 5] = [
+        Duration::from_millis(10),
+        Duration::from_millis(50),
+        Duration::from_millis(250),
+        Duration::from_millis(1000),
+        Duration::from_millis(5000),
+    ];
+    const NUM_LIMITS: usize = TIME_LIMITS.len();
+
+    // one accumulator slot per time limit
+    let mut total_score = [0u32; NUM_LIMITS];
+    let mut total_nodes = [0u64; NUM_LIMITS];
+    let mut best_moves_found = [0u32; NUM_LIMITS];
+    let mut total_search_duration = [Duration::new(0, 0); NUM_LIMITS];
+    let mut total_ebf = [0.0f64; NUM_LIMITS];
+    let mut total_depth = [0usize; NUM_LIMITS];
+
+    // these are per-position, shared across every time limit
     let mut max_score = 0u32;
     let mut tests_run = 0u32;
-    let mut best_moves_found = 0u32;
-    let mut total_search_duration = Duration::new(0, 0);
-    let mut total_ebf = 0.0;
-    let mut total_depth = 0;
 
     for entry in entries {
         let path = match entry {
@@ -233,41 +243,48 @@ pub fn strength_test() {
             tests_run += 1;
 
             // search the position and score the move the engine chose
-            let start = Instant::now();
-            let (_eval, best_move, nodes, q_nodes, depth) = test.position.root_search(RootSearchType::TimeLimited(STRENGTH_TEST_TIME), &mut tt);
-            total_search_duration += start.elapsed();
+            for (i, &time_limit) in TIME_LIMITS.iter().enumerate() {
+                let start = Instant::now();
+                let (_eval, best_move, nodes, q_nodes, depth) = test.position.root_search(RootSearchType::TimeLimited(time_limit), &mut tt);
+                total_search_duration[i] += start.elapsed();
 
-            let scored = test
-                .candidates
-                .iter()
-                .find(|c| c.mv == best_move)
-                .map(|c| c.points)
-                .unwrap_or(0);
+                let scored = test
+                    .candidates
+                    .iter()
+                    .find(|c| c.mv == best_move)
+                    .map(|c| c.points)
+                    .unwrap_or(0);
 
-            total_score += scored;
-            total_nodes += nodes + q_nodes;
-            if scored == best_available {
-                best_moves_found += 1;
+                total_score[i] += scored;
+                total_nodes[i] += nodes + q_nodes;
+                if scored == best_available {
+                    best_moves_found[i] += 1;
+                }
+
+                let (dest, orig, _, _) = split_move(best_move);
+                let ebf = ebf_estimate(nodes, depth);
+                total_depth[i] += depth;
+                total_ebf[i] += ebf;
+                println!("{:<15} engine played {}{} -> {}/{} -- {} nodes at depth {} (EBF {:.2})", test.id, orig, dest, scored, best_available, nodes, depth, ebf);
             }
-
-            let (dest, orig, _, _) = split_move(best_move);
-            let ebf = ebf_estimate(nodes, depth);
-            total_depth += depth;
-            total_ebf += ebf;
-            println!("{:<15} engine played {}{} -> {}/{} -- {} nodes at depth {} (EBF {:.2})", test.id, orig, dest, scored, best_available, nodes, depth, ebf);
+            println!();
         }
     }
 
-    // print the results
-    let mnps = ((total_nodes as f64) / total_search_duration.as_secs_f64()) / 1_000_000.0;
+    // print the results, broken out by each time limit
     println!("\nStrength Test Complete");
-    println!("Score: {}/{} ({:.2})", total_score, max_score, total_score as f64 / max_score as f64);
-    println!("Best moves found: {}/{} ({:.2})", best_moves_found, tests_run, best_moves_found as f64 / tests_run as f64);
-    println!("Search time: {:?}", total_search_duration);
-    println!("Total nodes: {}", crate::format_with_commas(total_nodes));
-    println!("Avg. Depth: {:.2}", (total_depth as f64 / tests_run as f64));
-    println!("MN/S: {:.2}", mnps);
-    println!("EBF: {:.2}\n", (total_ebf / tests_run as f64));
+    for (i, time_limit) in TIME_LIMITS.iter().enumerate() {
+        let mnps = ((total_nodes[i] as f64) / total_search_duration[i].as_secs_f64()) / 1_000_000.0;
+        println!("\n--- Time Limit: {:?} ---", time_limit);
+        println!("Score: {}/{} ({:.2})", total_score[i], max_score, total_score[i] as f64 / max_score as f64);
+        println!("Best moves found: {}/{} ({:.2})", best_moves_found[i], tests_run, best_moves_found[i] as f64 / tests_run as f64);
+        println!("Search time: {:?}", total_search_duration[i]);
+        println!("Total nodes: {}", crate::format_with_commas(total_nodes[i]));
+        println!("Avg. Depth: {:.2}", (total_depth[i] as f64 / tests_run as f64));
+        println!("MN/S: {:.2}", mnps);
+        println!("EBF: {:.2}", (total_ebf[i] / tests_run as f64));
+    }
+    println!();
 }
 
 fn ebf_estimate(nodes: u64, depth: usize) -> f64 {
