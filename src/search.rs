@@ -43,7 +43,7 @@ fn time_search(p: &mut Position, budget: Duration) -> (Eval, Move, u64, usize) {
     let mut total_nodes = 0;
 
     // search as long as the estimated branching factor times the last search time is less than the remaining budget
-    const EBF: u32 = 5; // Estimated branching factor is 5, better move ordering/TTs will decrease this
+    const EBF: u32 = 4; // Estimated branching factor is 4, better move ordering/TTs will decrease this
     let mut last_search_time = Duration::new(0, 0);
     let mut depth = 1;
     while last_search_time * EBF < budget {

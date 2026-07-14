@@ -83,7 +83,7 @@ pub fn perf_test() {
 }
 
 // How deep the engine searches each strength-test position
-const STRENGTH_TEST_TIME: Duration = Duration::from_millis(333);
+const STRENGTH_TEST_TIME: Duration = Duration::from_millis(500);
 
 // Bnech mark test structs
 struct BenchmarkTestCandidate {
