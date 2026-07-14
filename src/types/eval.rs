@@ -1,5 +1,3 @@
-use crate::types::color::Color;
-
 // Centipawns
 pub type Eval = i16;
 

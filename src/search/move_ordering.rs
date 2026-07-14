@@ -1,4 +1,4 @@
-use crate::types::chess_move::{Move, split_move};
+use crate::types::chess_move::{MOVE_FLAG_CASTLE, MOVE_FLAG_ENPASSANT, MOVE_FLAG_PROMO, Move, split_move};
 use crate::types::piece::Piece;
 use crate::types::position::Position;
 
@@ -25,6 +25,7 @@ impl Position {
 const CAPTURE_BASE_SCORE: i16 = 1_000;
 const QUEEN_PROMO_SCORE: i16 = 1_000;
 pub const KILLER_SCORE: i16 = 500;
+const CASTLE_SCORE: i16 = 250;
 const TT_MOVE_SCORE: i16 = 10_000;
 fn score_move_order(p: &Position, m: Move, tt_move: Move, killers: (Move, Move), history_heuristic: &[[i16; 64]; 64]) -> i16 {
     if m == tt_move {
@@ -45,13 +46,18 @@ fn score_move_order(p: &Position, m: Move, tt_move: Move, killers: (Move, Move),
         score += (victim.to_value() - attacker.to_value()) + CAPTURE_BASE_SCORE;
     }
 
-    // If promotion, filter queens high and the rest low
-    if promo != Piece::Empty {
-        if promo == Piece::Queen {
-            score += QUEEN_PROMO_SCORE;
-        } else {
-            score -= QUEEN_PROMO_SCORE;
-        }
+    match flag {
+        MOVE_FLAG_PROMO => {
+            // If queen promo, order high, else order low
+            if promo == Piece::Queen {
+                score += QUEEN_PROMO_SCORE;
+            } else {
+                score -= QUEEN_PROMO_SCORE;
+            }
+        },
+        MOVE_FLAG_CASTLE => score += CASTLE_SCORE,  // move up castling moves a bit
+        MOVE_FLAG_ENPASSANT => score += CAPTURE_BASE_SCORE,  // en passant is just a base capture (not handled by above)
+        _ => {},
     }
 
     score + history_heuristic[orig.idx()][dest.idx()]

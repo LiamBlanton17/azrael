@@ -1,4 +1,6 @@
-use crate::types::{chess_move::Move, eval::{Eval, MATE}, position::ZobristHash};
+use crate::types::chess_move::Move;
+use crate::types::eval::Eval;
+use crate::types::position::ZobristHash;
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum Bound {
