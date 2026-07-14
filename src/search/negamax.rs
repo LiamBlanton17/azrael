@@ -4,6 +4,7 @@ use crate::types::chess_move::Move;
 use crate::types::eval::{self, Eval, MATE};
 use crate::types::position::{Position, ZobristHash};
 
+// Return eval, move, negamax nodes, quiescence nodes
 pub fn negamax(
     p: &mut Position, 
     depth: usize, 
@@ -12,9 +13,10 @@ pub fn negamax(
     beta: Eval, 
     move_stack: &mut Vec<Vec<Move>>, 
     history: &mut Vec<ZobristHash>
-) -> (Eval, Move, u64) {
+) -> (Eval, Move, u64, u64) {
     if depth == 0 {
-        return quiescence(p, ply, alpha, beta, move_stack, history)
+        let (e, m, q_nodes) = quiescence(p, ply, alpha, beta, move_stack, history);
+        return (e, m, 0, q_nodes);
     }
 
     let move_stack_idx = ply as usize;
@@ -25,6 +27,7 @@ pub fn negamax(
     history.push(p.zobrist);
 
     // recursive negamax search
+    let mut q_nodes = 0;
     let mut nodes = 1;
     let mut best_eval = eval::MIN_EVAL;
     let mut best_move = 0;
@@ -37,13 +40,14 @@ pub fn negamax(
         let is_legal_move = !p.can_kill_king();
         if is_legal_move {
             found_legal_move = true;
-            let (e, n) = if p.is_fifty_move_rule() || p.is_three_fold(history) {
-                (0, 0)
+            let (e, n, qn) = if p.is_fifty_move_rule() || p.is_three_fold(history) {
+                (0, 0, 0)
             } else {
-                let (e, _, n) = negamax(p, depth - 1, ply + 1, -beta, -alpha, move_stack, history);
-                (-e, n)
+                let (e, _, n, qn) = negamax(p, depth - 1, ply + 1, -beta, -alpha, move_stack, history);
+                (-e, n, qn)
             };
             nodes += n;
+            q_nodes += qn;
             if e > best_eval {
                 best_eval = e;
                 best_move = m;
@@ -66,12 +70,12 @@ pub fn negamax(
         let in_check = p.can_kill_king();
         p.turn = p.turn.flip();
         if in_check {
-            (-MATE + ply, 0, nodes)
+            (-MATE + ply, 0, nodes, q_nodes)
         } else {
-            (0, 0, nodes)
+            (0, 0, nodes, q_nodes)
         }
     } else {
-        (best_eval, best_move, nodes)
+        (best_eval, best_move, nodes, q_nodes)
     }
 
 }

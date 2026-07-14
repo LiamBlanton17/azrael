@@ -47,12 +47,13 @@ fn main() {
             match p {
                 Ok(mut p) => {
                     let start = Instant::now();
-                    let (e, m, n, d) = p.root_search(search_type);
+                    let (e, m, n, qn, d) = p.root_search(search_type);
+                    let total_nodes = n + qn;
                     let duration = start.elapsed();
                     let (dest, orig, _, _) = split_move(m);
-                    let mnps = ((n as f64) / duration.as_secs_f64()) / 1_000_000.0;
+                    let mnps = ((total_nodes as f64) / duration.as_secs_f64()) / 1_000_000.0;
                     println!("Move from {} to {}. Eval is: {}", dest, orig, e);
-                    println!("Found this move in {} ms, reached a depth of {}, searching {} nodes ({} MN/s)", duration.as_millis(), d, format_with_commas(n), mnps);
+                    println!("Found this move in {} ms, reached a depth of {}, searching {} nodes ({} MN/s)", duration.as_millis(), d, format_with_commas(total_nodes), mnps);
                 },
                 Err(e) => {
                     println!("Failed to parse FEN: ");

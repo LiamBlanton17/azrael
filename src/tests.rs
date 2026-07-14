@@ -83,7 +83,7 @@ pub fn perf_test() {
 }
 
 // How deep the engine searches each strength-test position
-const STRENGTH_TEST_TIME: Duration = Duration::from_millis(500);
+const STRENGTH_TEST_TIME: Duration = Duration::from_millis(250);
 
 // Bnech mark test structs
 struct BenchmarkTestCandidate {
@@ -178,6 +178,8 @@ pub fn strength_test() {
     let mut tests_run = 0u32;
     let mut best_moves_found = 0u32;
     let mut total_search_duration = Duration::new(0, 0);
+    let mut total_ebf = 0.0;
+    let mut total_depth = 0;
 
     for entry in entries {
         let path = match entry {
@@ -230,7 +232,7 @@ pub fn strength_test() {
 
             // search the position and score the move the engine chose
             let start = Instant::now();
-            let (_eval, best_move, nodes, _depth) =
+            let (_eval, best_move, nodes, q_nodes, depth) =
                 test.position.root_search(RootSearchType::TimeLimited(STRENGTH_TEST_TIME));
             total_search_duration += start.elapsed();
 
@@ -242,13 +244,16 @@ pub fn strength_test() {
                 .unwrap_or(0);
 
             total_score += scored;
-            total_nodes += nodes;
+            total_nodes += nodes + q_nodes;
             if scored == best_available {
                 best_moves_found += 1;
             }
 
             let (dest, orig, _, _) = split_move(best_move);
-            println!("{:<15} engine played {}{} -> {}/{}", test.id, orig, dest, scored, best_available);
+            let ebf = ebf_estimate(nodes, depth);
+            total_depth += depth;
+            total_ebf += ebf;
+            println!("{:<15} engine played {}{} -> {}/{} -- {} nodes at depth {} (EBF {:.2})", test.id, orig, dest, scored, best_available, nodes, depth, ebf);
         }
     }
 
@@ -259,5 +264,11 @@ pub fn strength_test() {
     println!("Best moves found: {}/{} ({:.2})", best_moves_found, tests_run, best_moves_found as f64 / tests_run as f64);
     println!("Search time: {:?}", total_search_duration);
     println!("Total nodes: {}", crate::format_with_commas(total_nodes));
-    println!("MN/S: {:.2}\n", mnps);
+    println!("Avg. Depth: {:.2}", (total_depth as f64 / tests_run as f64));
+    println!("MN/S: {:.2}", mnps);
+    println!("EBF: {:.2}\n", (total_ebf / tests_run as f64));
+}
+
+fn ebf_estimate(nodes: u64, depth: usize) -> f64 {
+    (nodes as f64).powf(1.0 / depth as f64)
 }
