@@ -36,11 +36,12 @@ When generating moves for the chess engine, it will be designed explicity from t
 
 ## Last Strength Test Run (7/14/2026)
 
-#### 250ms budget
-- Score: 2166/6770 (0.32)
-- Best moves found: 135/677 (0.20)
-- Search time: 112.3773103s
-- Total nodes: 1,297,891,821
-- Avg. Depth: 7.70
-- MN/S: 11.55
-- EBF: 4.82
+#### 10ms budget
+- Score: 2627/6770 (0.39)
+- Best moves found: 171/677 (0.25)
+- Search time: 5.1664371s
+- Total nodes: 41,642,106
+- Avg. Depth: 5.90
+- MN/S: 8.06
+- EBF: 4.22
+

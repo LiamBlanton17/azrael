@@ -9,6 +9,7 @@ pub fn quiescence(
     beta: Eval,
     move_stack: &mut Vec<Vec<Move>>,
     history: &mut Vec<ZobristHash>,
+    history_heuristic: &[[i16; 64]; 64],
 ) -> (Eval, Move, u64) {
 
     // stand-pat: assume the side to move can "do nothing" and take the current eval
@@ -22,21 +23,20 @@ pub fn quiescence(
     }
 
     // only generate and check captures
-    let move_stack_idx = ply as usize;
-    ensure_move_stack_len(move_stack, move_stack_idx);
-    p.generate_moves(&mut move_stack[move_stack_idx], MoveGenLevel::Captures, true,  (0, 0));
-    let num_moves = move_stack[move_stack_idx].len();
+    ensure_move_stack_len(move_stack, ply);
+    p.generate_moves(&mut move_stack[ply], MoveGenLevel::Captures, true, 0, (0, 0), history_heuristic);
+    let num_moves = move_stack[ply].len();
 
     let mut nodes = 1;
     let mut best_eval = stand_pat;
     let mut best_move = 0;
     for i in 0..num_moves {
-        let m = move_stack[move_stack_idx][i];
+        let m = move_stack[ply][i];
 
         let um = p.make_move(m);
         let is_legal_move = !p.can_kill_king();
         if is_legal_move {
-            let (e, _, n) = quiescence(p, ply + 1, -beta, -alpha, move_stack, history);
+            let (e, _, n) = quiescence(p, ply + 1, -beta, -alpha, move_stack, history, history_heuristic);
             let e = -e;
             nodes += n;
 

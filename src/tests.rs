@@ -1,6 +1,6 @@
 use std::{fs::{self, File}, io::{BufRead, BufReader}, time::{Duration, Instant}};
 
-use crate::{search::{RootSearchType, init_engine, move_generation::MoveGenLevel}, types::{chess_move::{Move, split_move}, position::{Position, ZobristHash}}};
+use crate::{search::{RootSearchType, init_engine, move_generation::MoveGenLevel, tt::TranspositionTable}, types::{chess_move::{Move, split_move}, position::{Position, ZobristHash}}};
 
 // Used by the CLI to run a perf test -- this verifies the move generation is working correctly
 // It also provides a best test of raw nodes per second the engine can do, without any other overhead than raw search
@@ -18,7 +18,7 @@ pub fn perf_test() {
 
         // generate the new moves for this position
         // using a 2d stack for moves to avoid any allocation on hot path
-        p.generate_moves(&mut move_stack[depth], MoveGenLevel::All, false,  (0, 0));
+        p.generate_moves(&mut move_stack[depth], MoveGenLevel::All, false, 0, (0, 0), &[[0; 64]; 64]);
         let num_moves = move_stack[depth].len();
 
         // add zobrist of the position to history (to avoid 3-folds)
@@ -83,7 +83,7 @@ pub fn perf_test() {
 }
 
 // How deep the engine searches each strength-test position
-const STRENGTH_TEST_TIME: Duration = Duration::from_millis(250);
+const STRENGTH_TEST_TIME: Duration = Duration::from_millis(10);
 
 // Bnech mark test structs
 struct BenchmarkTestCandidate {
@@ -204,6 +204,8 @@ pub fn strength_test() {
         };
         println!("\n=== {} ===", path.display());
 
+        let mut tt = TranspositionTable::new(128);
+
         for line in BufReader::new(file).lines() {
             let line = match line {
                 Ok(line) => line,
@@ -232,8 +234,7 @@ pub fn strength_test() {
 
             // search the position and score the move the engine chose
             let start = Instant::now();
-            let (_eval, best_move, nodes, q_nodes, depth) =
-                test.position.root_search(RootSearchType::TimeLimited(STRENGTH_TEST_TIME));
+            let (_eval, best_move, nodes, q_nodes, depth) = test.position.root_search(RootSearchType::TimeLimited(STRENGTH_TEST_TIME), &mut tt);
             total_search_duration += start.elapsed();
 
             let scored = test

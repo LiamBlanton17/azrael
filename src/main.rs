@@ -12,6 +12,8 @@ use search::{RootSearchType, init_engine};
 use types::chess_move::split_move;
 use types::position::Position;
 
+use crate::search::tt::TranspositionTable;
+
 
 fn main() {
 
@@ -46,8 +48,9 @@ fn main() {
             let p = Position::from_fen(fen);
             match p {
                 Ok(mut p) => {
+                    let mut tt = TranspositionTable::new(128);
                     let start = Instant::now();
-                    let (e, m, n, qn, d) = p.root_search(search_type);
+                    let (e, m, n, qn, d) = p.root_search(search_type, &mut tt);
                     let total_nodes = n + qn;
                     let duration = start.elapsed();
                     let (dest, orig, _, _) = split_move(m);

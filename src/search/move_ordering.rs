@@ -1,16 +1,15 @@
-use crate::search::move_generation::MAX_MOVES_IN_POSITION;
 use crate::types::chess_move::{Move, split_move};
 use crate::types::piece::Piece;
 use crate::types::position::Position;
 
 impl Position {
 
-    pub fn order_moves(&self, move_stack: &mut Vec<Move>, killers: (Move, Move)) {
+    pub fn order_moves(&self, move_stack: &mut Vec<Move>, tt_move: Move, killers: (Move, Move), history_heuristic: &[[i16; 64]; 64]) {
         let len = move_stack.len();
-        let mut scored: [(Move, u16); 256] = [(Move::default(), 0); 256];
+        let mut scored: [(Move, i16); 256] = [(Move::default(), 0); 256];
 
         for i in 0..len {
-            scored[i] = (move_stack[i], score_move_order(self, move_stack[i], killers));
+            scored[i] = (move_stack[i], score_move_order(self, move_stack[i], tt_move, killers, history_heuristic));
         }
 
         scored[..len].sort_unstable_by_key(|&(_, score)| std::cmp::Reverse(score));
@@ -23,9 +22,15 @@ impl Position {
 }
 
 // https://www.chessprogramming.org/Move_Ordering
-const CAPTURE_BASE_SCORE: u16 = 1000;
-const KILLER_SCORE: u16 = 500;
-fn score_move_order(p: &Position, m: Move, killers: (Move, Move)) -> u16 {
+const CAPTURE_BASE_SCORE: i16 = 1_000;
+const QUEEN_PROMO_SCORE: i16 = 1_000;
+pub const KILLER_SCORE: i16 = 500;
+const TT_MOVE_SCORE: i16 = 10_000;
+fn score_move_order(p: &Position, m: Move, tt_move: Move, killers: (Move, Move), history_heuristic: &[[i16; 64]; 64]) -> i16 {
+    if m == tt_move {
+        return TT_MOVE_SCORE;
+    }
+
     let (dest, orig, promo, flag) = split_move(m);
     let attacker = p.mailbox[orig.idx()];
     let victim = p.mailbox[dest.idx()];
@@ -37,8 +42,17 @@ fn score_move_order(p: &Position, m: Move, killers: (Move, Move)) -> u16 {
     }
 
     if victim != Piece::Empty {
-        score += (victim.to_value() - attacker.to_value()) as u16 + CAPTURE_BASE_SCORE;
+        score += (victim.to_value() - attacker.to_value()) + CAPTURE_BASE_SCORE;
     }
 
-    score
+    // If promotion, filter queens high and the rest low
+    if promo != Piece::Empty {
+        if promo == Piece::Queen {
+            score += QUEEN_PROMO_SCORE;
+        } else {
+            score -= QUEEN_PROMO_SCORE;
+        }
+    }
+
+    score + history_heuristic[orig.idx()][dest.idx()]
 }
