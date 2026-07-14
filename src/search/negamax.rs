@@ -8,11 +8,12 @@ use crate::types::position::{Position, ZobristHash};
 pub fn negamax(
     p: &mut Position, 
     depth: usize, 
-    ply: i16, 
+    ply: usize, 
     mut alpha: Eval, 
     beta: Eval, 
     move_stack: &mut Vec<Vec<Move>>, 
-    history: &mut Vec<ZobristHash>
+    history: &mut Vec<ZobristHash>,
+    killers: &mut Vec<(Move, Move)>,
 ) -> (Eval, Move, u64, u64) {
     if depth == 0 {
         let (e, m, q_nodes) = quiescence(p, ply, alpha, beta, move_stack, history);
@@ -21,7 +22,7 @@ pub fn negamax(
 
     let move_stack_idx = ply as usize;
     ensure_move_stack_len(move_stack, move_stack_idx);
-    p.generate_moves(&mut move_stack[move_stack_idx], MoveGenLevel::All, true);
+    p.generate_moves(&mut move_stack[move_stack_idx], MoveGenLevel::All, true, killers[ply]);
     let num_moves = move_stack[move_stack_idx].len();
 
     history.push(p.zobrist);
@@ -43,7 +44,7 @@ pub fn negamax(
             let (e, n, qn) = if p.is_fifty_move_rule() || p.is_three_fold(history) {
                 (0, 0, 0)
             } else {
-                let (e, _, n, qn) = negamax(p, depth - 1, ply + 1, -beta, -alpha, move_stack, history);
+                let (e, _, n, qn) = negamax(p, depth - 1, ply + 1, -beta, -alpha, move_stack, history, killers);
                 (-e, n, qn)
             };
             nodes += n;
@@ -60,6 +61,12 @@ pub fn negamax(
 
         // alpha-beta cutoff
         if alpha >= beta {
+
+            // Add to killers if not already in them and is not a capture
+            if m != killers[ply].0 && !p.is_move_capture(m) {
+                killers[ply].1 = killers[ply].0;
+                killers[ply].0 = m;
+            }
             break;
         }
     }
@@ -70,7 +77,7 @@ pub fn negamax(
         let in_check = p.can_kill_king();
         p.turn = p.turn.flip();
         if in_check {
-            (-MATE + ply, 0, nodes, q_nodes)
+            (-MATE + ply as i16, 0, nodes, q_nodes)
         } else {
             (0, 0, nodes, q_nodes)
         }

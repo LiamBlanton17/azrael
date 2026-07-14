@@ -41,7 +41,7 @@ pub fn ensure_move_stack_len(move_stack: &mut Vec<Vec<Move>>, ply: usize) {
 impl Position {
 
     // Public function to call to generate moves for a position
-    pub fn generate_moves(&self, move_stack: &mut Vec<chess_move::Move>, level: MoveGenLevel, apply_ordering: bool) {
+    pub fn generate_moves(&self, move_stack: &mut Vec<chess_move::Move>, level: MoveGenLevel, apply_ordering: bool, killers: (Move, Move)) {
         move_stack.clear();
         self.generate_pawn_moves(move_stack, level);
         self.generate_knight_moves(move_stack, level);
@@ -51,7 +51,7 @@ impl Position {
         self.generate_king_moves(move_stack, level);
 
         if apply_ordering {
-            self.order_moves(move_stack);
+            self.order_moves(move_stack, killers);
         }
     }
 

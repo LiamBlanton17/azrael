@@ -4,7 +4,7 @@ use crate::{search::move_generation::{ensure_move_stack_len, MoveGenLevel}, type
 // also includes a standpat, which prevents bad captures from being forced
 pub fn quiescence(
     p: &mut Position,
-    ply: i16,
+    ply: usize,
     mut alpha: Eval,
     beta: Eval,
     move_stack: &mut Vec<Vec<Move>>,
@@ -24,7 +24,7 @@ pub fn quiescence(
     // only generate and check captures
     let move_stack_idx = ply as usize;
     ensure_move_stack_len(move_stack, move_stack_idx);
-    p.generate_moves(&mut move_stack[move_stack_idx], MoveGenLevel::Captures, true);
+    p.generate_moves(&mut move_stack[move_stack_idx], MoveGenLevel::Captures, true,  (0, 0));
     let num_moves = move_stack[move_stack_idx].len();
 
     let mut nodes = 1;

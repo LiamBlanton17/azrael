@@ -40,6 +40,12 @@ impl Position {
     }
 
     #[inline]
+    pub fn is_move_capture(&self, m: Move) -> bool {
+        let (d, _, _, _) = split_move(m);
+        self.mailbox[d.idx()] != Piece::Empty
+    }
+
+    #[inline]
     pub fn is_square_underattack(&self, sq: Square) -> bool {
         let c = !self.turn;
 
