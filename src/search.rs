@@ -32,7 +32,13 @@ impl Position {
 
 }
 
-// Main branch from root_search
+// Main breanch from root_search - if best_move is stable for 3 iterations in a row, or a time budget is exceeded
+// Stable is defined as the same best move and the best eval not moving more than 10 centipawns
+fn stable_search() {
+    unimplemented!("todo in future")
+}
+
+// Main branch from root_search - do not exceed a time budget
 const TIME_SEARCH_EXPECTED_MAX_DEPTH: usize = 32;  // Prepare allocation for up to a depth of 32, will allocate more if needed (unlikely)
 fn time_search(p: &mut Position, budget: Duration) -> (Eval, Move, u64, u64, usize) {
     let mut move_stack: Vec<Vec<Move>> = (0..=TIME_SEARCH_EXPECTED_MAX_DEPTH).map(|_| Position::new_move_stack()).collect();
@@ -65,7 +71,7 @@ fn time_search(p: &mut Position, budget: Duration) -> (Eval, Move, u64, u64, usi
     (best_eval, best_move, total_nodes, total_q_nodes, depth)
 }
 
-// Main branch from root_search
+// Main branch from root_search - go to a predefined depth
 // Allocating for depth + 16 (for quiesence search after depth reached, want to prevent reallocs)
 fn depth_search(p: &mut Position, depth: usize) -> (Eval, Move, u64, u64, usize) {
     let mut move_stack: Vec<Vec<Move>> = (0..=(depth + 16)).map(|_| Position::new_move_stack()).collect();
