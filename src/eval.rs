@@ -31,6 +31,8 @@ impl Position {
         let phase = get_phase_score(self);
         let mut eval = pst_eval(self, phase);
         eval += pawn_structure_eval(self, phase);
+        eval += bishop_pair_eval(self, phase);
+        eval += tempo_eval(self, phase);
 
         eval
     }
@@ -42,6 +44,26 @@ impl Position {
         }
     }
 
+}
+
+// Give a slight bonus for tempo, slight better later in game
+fn tempo_eval(p: &Position, phase: i32) -> Eval {
+    if p.turn == Color::White { 
+        interpolate_phase(phase, 9, 17)
+    } else {
+        -interpolate_phase(phase, 9, 17)
+    }
+}
+
+// Get an evaluation of the minor piece match ups, based on the phase of game
+fn bishop_pair_eval(p: &Position, phase: i32) -> Eval {
+    let count_white_bishops = p.get_piece(Piece::Bishop, Color::White).0.count_ones();
+    let count_black_bishops = p.get_piece(Piece::Bishop, Color::Black).0.count_ones();
+    let bishop_pair_bonus = interpolate_phase(phase, 17, 29);
+
+    let mut eval = if count_white_bishops > 1 { bishop_pair_bonus } else { 0 };
+    eval -= if count_black_bishops > 1 { bishop_pair_bonus } else { 0 };
+    eval
 }
 
 // Get a PST evaluation of the position, based on phase of game
