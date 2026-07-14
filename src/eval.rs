@@ -33,6 +33,8 @@ impl Position {
         eval += pawn_structure_eval(self, phase);
         eval += bishop_pair_eval(self, phase);
         eval += tempo_eval(self, phase);
+        eval += king_safety_eval(self, phase);
+        eval += file_based_eval(self, phase);
 
         eval
     }
@@ -55,11 +57,141 @@ fn tempo_eval(p: &Position, phase: i32) -> Eval {
     }
 }
 
+// Evaluate king safety: reward friendly pawns/pieces shielding each king and punish enemy
+// pawns/pieces crowding it. Every term fades to zero in the endgame, where king safety matters less.
+fn king_safety_eval(p: &Position, phase: i32) -> Eval {
+    let mut eval: Eval = 0;
+
+    // Phase scores: friendly shelter is worth more than enemy pressure per pawn, and enemy
+    // pieces next to the king are as dangerous as enemy pawns.
+    let friendly_pawn_score = interpolate_phase(phase, 17, 0);
+    let enemy_pawn_score = interpolate_phase(phase, 15, 0);
+    let friendly_piece_score = interpolate_phase(phase, 5, 0);
+    let enemy_piece_score = interpolate_phase(phase, 19, 0);
+
+    let white_occ = p.color[Color::White.idx()];
+    let black_occ = p.color[Color::Black.idx()];
+    let white_pawns = p.get_piece(Piece::Pawn, Color::White);
+    let black_pawns = p.get_piece(Piece::Pawn, Color::Black);
+
+    // White king: friendly = white, enemy = black. Count pawns/pieces in the ring around the king.
+    let safety_mask = KING_SAFETY_MASK[p.get_piece(Piece::King, Color::White).lsb_as_square().idx()];
+    let friendly_pawns = white_pawns & safety_mask;
+    let enemy_pawns = black_pawns & safety_mask;
+    let friendly_pieces = (white_occ & !friendly_pawns) & safety_mask;
+    let enemy_pieces = (black_occ & !enemy_pawns) & safety_mask;
+    eval += friendly_pawns.0.count_ones() as Eval * friendly_pawn_score;
+    eval += friendly_pieces.0.count_ones() as Eval * friendly_piece_score;
+    eval -= enemy_pawns.0.count_ones() as Eval * enemy_pawn_score;
+    eval -= enemy_pieces.0.count_ones() as Eval * enemy_piece_score;
+
+    // Black king: friendly = black, enemy = white. Signs are flipped so + still favours White.
+    let safety_mask = KING_SAFETY_MASK[p.get_piece(Piece::King, Color::Black).lsb_as_square().idx()];
+    let friendly_pawns = black_pawns & safety_mask;
+    let enemy_pawns = white_pawns & safety_mask;
+    let friendly_pieces = (black_occ & !friendly_pawns) & safety_mask;
+    let enemy_pieces = (white_occ & !enemy_pawns) & safety_mask;
+    eval -= friendly_pawns.0.count_ones() as Eval * friendly_pawn_score;
+    eval -= friendly_pieces.0.count_ones() as Eval * friendly_piece_score;
+    eval += enemy_pawns.0.count_ones() as Eval * enemy_pawn_score;
+    eval += enemy_pieces.0.count_ones() as Eval * enemy_piece_score;
+
+    eval
+}
+
+// Evaluate open-file control: reward rooks/queens on open and semi-open files, penalise a king
+// sitting on one. "Your semi" = open on the mover's side, "opp semi" = open on the opponent's.
+fn file_based_eval(p: &Position, phase: i32) -> Eval {
+    let mut eval: Eval = 0;
+
+    let bonus_for_rook_your_semi = interpolate_phase(phase, 11, 23);
+    let bonus_for_rook_opp_semi = interpolate_phase(phase, 7, 16);
+    let bonus_for_rook_full = interpolate_phase(phase, 19, 26);
+    let bonus_for_queen_your_semi = interpolate_phase(phase, 7, 14);
+    let bonus_for_queen_opp_semi = interpolate_phase(phase, 4, 10);
+    let bonus_for_queen_full = interpolate_phase(phase, 9, 17);
+    let penalty_for_king_your_semi = interpolate_phase(phase, 22, 0);
+    let penalty_for_king_opp_semi = interpolate_phase(phase, 17, 0);
+    let penalty_for_king_full = interpolate_phase(phase, 32, 0);
+
+    let white_pawns = p.get_piece(Piece::Pawn, Color::White);
+    let black_pawns = p.get_piece(Piece::Pawn, Color::Black);
+    let white_rooks = p.get_piece(Piece::Rook, Color::White);
+    let black_rooks = p.get_piece(Piece::Rook, Color::Black);
+    let white_queens = p.get_piece(Piece::Queen, Color::White);
+    let black_queens = p.get_piece(Piece::Queen, Color::Black);
+    let white_king = p.get_piece(Piece::King, Color::White);
+    let black_king = p.get_piece(Piece::King, Color::Black);
+
+    for file in 0..8 {
+        let mask = FILE_MASK[file];
+        let has_white_pawn = (white_pawns & mask) != BitBoard(0);
+        let has_black_pawn = (black_pawns & mask) != BitBoard(0);
+        let white_rook_count = (white_rooks & mask).0.count_ones() as Eval;
+        let black_rook_count = (black_rooks & mask).0.count_ones() as Eval;
+        let white_queen_count = (white_queens & mask).0.count_ones() as Eval;
+        let black_queen_count = (black_queens & mask).0.count_ones() as Eval;
+        let has_white_king = (white_king & mask) != BitBoard(0);
+        let has_black_king = (black_king & mask) != BitBoard(0);
+
+        let full_open = !has_white_pawn && !has_black_pawn;
+        let white_semi_open = !has_white_pawn && has_black_pawn;
+        let black_semi_open = !has_black_pawn && has_white_pawn;
+
+        // Fully open file
+        if full_open {
+            eval += white_rook_count * bonus_for_rook_full;
+            eval -= black_rook_count * bonus_for_rook_full;
+            eval += white_queen_count * bonus_for_queen_full;
+            eval -= black_queen_count * bonus_for_queen_full;
+
+            if has_white_king {
+                eval -= penalty_for_king_full;
+            }
+            if has_black_king {
+                eval += penalty_for_king_full;
+            }
+        }
+
+        // Semi-open for White
+        if white_semi_open {
+            eval += white_rook_count * bonus_for_rook_your_semi;
+            eval -= black_rook_count * bonus_for_rook_opp_semi;
+            eval += white_queen_count * bonus_for_queen_your_semi;
+            eval -= black_queen_count * bonus_for_queen_opp_semi;
+
+            if has_white_king {
+                eval -= penalty_for_king_your_semi;
+            }
+            if has_black_king {
+                eval += penalty_for_king_opp_semi;
+            }
+        }
+
+        // Semi-open for Black
+        if black_semi_open {
+            eval += white_rook_count * bonus_for_rook_opp_semi;
+            eval -= black_rook_count * bonus_for_rook_your_semi;
+            eval += white_queen_count * bonus_for_queen_opp_semi;
+            eval -= black_queen_count * bonus_for_queen_your_semi;
+
+            if has_white_king {
+                eval -= penalty_for_king_opp_semi;
+            }
+            if has_black_king {
+                eval += penalty_for_king_your_semi;
+            }
+        }
+    }
+
+    eval
+}
+
 // Get an evaluation of the minor piece match ups, based on the phase of game
 fn bishop_pair_eval(p: &Position, phase: i32) -> Eval {
     let count_white_bishops = p.get_piece(Piece::Bishop, Color::White).0.count_ones();
     let count_black_bishops = p.get_piece(Piece::Bishop, Color::Black).0.count_ones();
-    let bishop_pair_bonus = interpolate_phase(phase, 17, 29);
+    let bishop_pair_bonus = interpolate_phase(phase, 14, 29);
 
     let mut eval = if count_white_bishops > 1 { bishop_pair_bonus } else { 0 };
     eval -= if count_black_bishops > 1 { bishop_pair_bonus } else { 0 };
@@ -212,6 +344,40 @@ const FILE_MASK: [BitBoard; 8] = {
     }
     masks
 };
+
+// King safety mask: the ring of up to 8 squares surrounding each square (its own square excluded).
+// Direction-agnostic, so the same table serves both kings.
+const KING_SAFETY_MASK: [BitBoard; 64] = build_king_safety_mask();
+const fn build_king_safety_mask() -> [BitBoard; 64] {
+    let mut masks = [BitBoard(0); 64];
+    let mut sq = 0;
+    while sq < 64 {
+        let row = sq / 8;
+        let col = sq % 8;
+        let row_lo = if row == 0 { 0 } else { row - 1 };
+        let row_hi = if row == 7 { 7 } else { row + 1 };
+        let col_lo = if col == 0 { 0 } else { col - 1 };
+        let col_hi = if col == 7 { 7 } else { col + 1 };
+
+        let mut mask: u64 = 0;
+        let mut r = row_lo;
+        while r <= row_hi {
+            let mut c = col_lo;
+            while c <= col_hi {
+                // Skip the king's own square; only the surrounding ring counts.
+                if !(r == row && c == col) {
+                    mask |= 1u64 << (r * 8 + c);
+                }
+                c += 1;
+            }
+            r += 1;
+        }
+
+        masks[sq] = BitBoard(mask);
+        sq += 1;
+    }
+    masks
+}
 
 // Passed pawn masks look at every sq in the file ahead for the pawn
 const WHITE_PASSED_MASK: [BitBoard; 64] = build_passed_mask(true);
