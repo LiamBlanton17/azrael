@@ -64,7 +64,7 @@ fn time_search(p: &mut Position, budget: Duration, tt: &mut TranspositionTable) 
 
         // negamax search to this depth
         let last_search_start = Instant::now();
-        let (e, m, n, qn) = negamax(p, depth, 0, MIN_EVAL, MATE, &mut move_stack, &mut history, &mut killers, &mut history_heuristic, tt);
+        let (e, m, n, qn) = negamax(p, depth, 0, -MATE, MATE, &mut move_stack, &mut history, &mut killers, &mut history_heuristic, tt);
         last_search_time = last_search_start.elapsed();
         best_eval = e;
         best_move = m;
@@ -94,7 +94,7 @@ fn depth_search(p: &mut Position, depth: usize, tt: &mut TranspositionTable) -> 
         history.clear();
 
         // negamax search to this depth
-        let (e, m, n, qn) = negamax(p, d, 0, MIN_EVAL, MATE, &mut move_stack, &mut history, &mut killers, &mut history_heuristic, tt);
+        let (e, m, n, qn) = negamax(p, d, 0, -MATE, MATE, &mut move_stack, &mut history, &mut killers, &mut history_heuristic, tt);
         best_eval = e;
         best_move = m;
         total_nodes += n;

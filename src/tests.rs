@@ -175,7 +175,7 @@ pub fn strength_test() {
         Duration::from_millis(50),
         Duration::from_millis(250),
         Duration::from_millis(1000),
-        Duration::from_millis(5000),
+        Duration::from_millis(2500),
     ];
     const NUM_LIMITS: usize = TIME_LIMITS.len();
 

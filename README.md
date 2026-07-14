@@ -36,46 +36,46 @@ When generating moves for the chess engine, it will be designed explicity from t
 
 ## Last Strength Test Run (7/14/2026)
 --- Time Limit: 10ms ---
-Score: 2611/6770 (0.39)
-Best moves found: 172/677 (0.25)
-Search time: 4.6848328s
-Total nodes: 34,899,480
-Avg. Depth: 5.66
-MN/S: 7.45
-EBF: 4.29
+Score: 3218/6770 (0.48)
+Best moves found: 218/677 (0.32)
+Search time: 4.5149094s
+Total nodes: 33,121,527
+Avg. Depth: 5.26
+MN/S: 7.34
+EBF: 4.51
 
 --- Time Limit: 50ms ---
-Score: 2633/6770 (0.39)
-Best moves found: 178/677 (0.26)
-Search time: 27.0238681s
-Total nodes: 170,751,775
-Avg. Depth: 7.01
-MN/S: 6.32
-EBF: 4.39
+Score: 3508/6770 (0.52)
+Best moves found: 254/677 (0.38)
+Search time: 23.7357071s
+Total nodes: 160,879,013
+Avg. Depth: 6.50
+MN/S: 6.78
+EBF: 4.45
 
 --- Time Limit: 250ms ---
-Score: 2689/6770 (0.40)
-Best moves found: 185/677 (0.27)
-Search time: 90.970239s
-Total nodes: 748,214,524
-Avg. Depth: 8.13
-MN/S: 8.22
-EBF: 4.12
+Score: 3652/6770 (0.54)
+Best moves found: 277/677 (0.41)
+Search time: 94.1130628s
+Total nodes: 734,715,366
+Avg. Depth: 7.63
+MN/S: 7.81
+EBF: 4.48
 
 --- Time Limit: 1s ---
-Score: 2707/6770 (0.40)
-Best moves found: 187/677 (0.28)
-Search time: 481.7248105s
-Total nodes: 3,181,591,202
-Avg. Depth: 9.19
-MN/S: 6.60
-EBF: 4.37
+Score: 3960/6770 (0.58)
+Best moves found: 303/677 (0.45)
+Search time: 456.0947882s
+Total nodes: 3,237,091,037
+Avg. Depth: 8.74
+MN/S: 7.10
+EBF: 4.47
 
---- Time Limit: 5s ---
-Score: 2716/6770 (0.40)
-Best moves found: 187/677 (0.28)
-Search time: 1901.0237717s
-Total nodes: 15,430,901,906
-Avg. Depth: 10.32
-MN/S: 8.12
-EBF: 4.15
+--- Time Limit: 2.5s ---
+Score: 4050/6770 (0.60)
+Best moves found: 305/677 (0.45)
+Search time: 1603.6033653s
+Total nodes: 12,802,516,548
+Avg. Depth: 9.75
+MN/S: 7.98
+EBF: 4.41

@@ -5,7 +5,7 @@ use crate::search::move_ordering::KILLER_SCORE;
 use crate::search::quiescence::quiescence;
 use crate::search::tt::{Bound, TranspositionTable};
 use crate::types::chess_move::{Move, split_move};
-use crate::types::eval::{self, Eval, MATE};
+use crate::types::eval::{self, Eval, MATE, score_from_tt, score_to_tt};
 use crate::types::position::{Position, ZobristHash};
 
 // Return eval, move, negamax nodes, quiescence nodes
@@ -32,18 +32,22 @@ pub fn negamax(
     if let Some(e) = tt.probe(p.zobrist) {
         tt_move = e.best_move;
         if ply > 0 && e.depth as usize >= depth {
+            let tt_score = score_from_tt(e.score, ply);
             let cutoff = match e.bound {
                 Bound::Exact => true,
-                Bound::Lower => e.score >= beta,
-                Bound::Upper => e.score <= alpha,
+                Bound::Lower => tt_score >= beta,
+                Bound::Upper => tt_score <= alpha,
             };
             if cutoff {
-                return (e.score, tt_move, 1, 0);
+                return (tt_score, tt_move, 1, 0);
             }
         }
     }
 
     ensure_move_stack_len(move_stack, ply);
+    if killers.len() <= ply {
+        killers.resize(ply + 1, (0, 0));
+    }
     p.generate_moves(&mut move_stack[ply], MoveGenLevel::All, true, tt_move, killers[ply], history_heuristic);
     let num_moves = move_stack[ply].len();
 
@@ -129,7 +133,7 @@ pub fn negamax(
         } else {
             Bound::Exact
         };
-        tt.store(p.zobrist, best_move, best_eval, depth as u8, bound);
+        tt.store(p.zobrist, best_move, score_to_tt(best_eval, ply), depth as u8, bound);
         (best_eval, best_move, nodes, q_nodes)
     }
 

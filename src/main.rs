@@ -55,7 +55,7 @@ fn main() {
                     let duration = start.elapsed();
                     let (dest, orig, _, _) = split_move(m);
                     let mnps = ((total_nodes as f64) / duration.as_secs_f64()) / 1_000_000.0;
-                    println!("Move from {} to {}. Eval is: {}", dest, orig, e);
+                    println!("Move from {} to {}. Eval is: {}", orig, dest, e);
                     println!("Found this move in {} ms, reached a depth of {}, searching {} nodes ({} MN/s)", duration.as_millis(), d, format_with_commas(total_nodes), mnps);
                 },
                 Err(e) => {
