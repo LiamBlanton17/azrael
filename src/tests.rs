@@ -170,14 +170,8 @@ pub fn strength_test() {
     };
 
     // the time limits each position is searched at -- metrics are tracked separately per limit
-    const TIME_LIMITS: [Duration; 5] = [
-        Duration::from_millis(10),
-        Duration::from_millis(50),
-        Duration::from_millis(250),
-        Duration::from_millis(1000),
-        Duration::from_millis(2500),
-    ];
-    const NUM_LIMITS: usize = TIME_LIMITS.len();
+    const DEPTH_LIMITS: [usize; 3] = [3, 4, 6];
+    const NUM_LIMITS: usize = DEPTH_LIMITS.len();
 
     // one accumulator slot per time limit
     let mut total_score = [0u32; NUM_LIMITS];
@@ -243,9 +237,10 @@ pub fn strength_test() {
             tests_run += 1;
 
             // search the position and score the move the engine chose
-            for (i, &time_limit) in TIME_LIMITS.iter().enumerate() {
+            for (i, &depth) in DEPTH_LIMITS.iter().enumerate() {
+                tt.clear();  // make sure tt is cleared before each search, but don't include in search time
                 let start = Instant::now();
-                let (_eval, best_move, nodes, q_nodes, depth) = test.position.root_search(RootSearchType::TimeLimited(time_limit), &mut tt);
+                let (_eval, best_move, nodes, q_nodes, actual_depth) = test.position.root_search(RootSearchType::StableDepthLimited(depth), &mut tt);
                 total_search_duration[i] += start.elapsed();
 
                 let scored = test
@@ -262,8 +257,8 @@ pub fn strength_test() {
                 }
 
                 let (dest, orig, _, _) = split_move(best_move);
-                let ebf = ebf_estimate(nodes, depth);
-                total_depth[i] += depth;
+                let ebf = ebf_estimate(nodes, actual_depth);
+                total_depth[i] += actual_depth;
                 total_ebf[i] += ebf;
                 println!("{:<15} engine played {}{} -> {}/{} -- {} nodes at depth {} (EBF {:.2})", test.id, orig, dest, scored, best_available, nodes, depth, ebf);
             }
@@ -273,9 +268,9 @@ pub fn strength_test() {
 
     // print the results, broken out by each time limit
     println!("\nStrength Test Complete");
-    for (i, time_limit) in TIME_LIMITS.iter().enumerate() {
+    for (i, depth) in DEPTH_LIMITS.iter().enumerate() {
         let mnps = ((total_nodes[i] as f64) / total_search_duration[i].as_secs_f64()) / 1_000_000.0;
-        println!("\n--- Time Limit: {:?} ---", time_limit);
+        println!("\n--- Depth Limit: {} ---", depth);
         println!("Score: {}/{} ({:.2})", total_score[i], max_score, total_score[i] as f64 / max_score as f64);
         println!("Best moves found: {}/{} ({:.2})", best_moves_found[i], tests_run, best_moves_found[i] as f64 / tests_run as f64);
         println!("Search time: {:?}", total_search_duration[i]);

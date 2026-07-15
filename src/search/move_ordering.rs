@@ -22,11 +22,11 @@ impl Position {
 }
 
 // https://www.chessprogramming.org/Move_Ordering
-const CAPTURE_BASE_SCORE: i16 = 1_000;
-const QUEEN_PROMO_SCORE: i16 = 1_000;
-pub const KILLER_SCORE: i16 = 500;
-const CASTLE_SCORE: i16 = 250;
-const TT_MOVE_SCORE: i16 = 10_000;
+const CAPTURE_BASE_SCORE: i16 = 26_000;
+const QUEEN_PROMO_SCORE: i16 = 2_500;
+pub const KILLER_SCORE: i16 = 25_000;
+const CASTLE_SCORE: i16 = 500;
+const TT_MOVE_SCORE: i16 = 30_000;
 fn score_move_order(p: &Position, m: Move, tt_move: Move, killers: (Move, Move), history_heuristic: &[[i16; 64]; 64]) -> i16 {
     if m == tt_move {
         return TT_MOVE_SCORE;
@@ -38,12 +38,10 @@ fn score_move_order(p: &Position, m: Move, tt_move: Move, killers: (Move, Move),
 
     let mut score = 0;
 
-    if m == killers.0 || m == killers.1 {
-        score += KILLER_SCORE;
-    }
-
     if victim != Piece::Empty {
         score += (victim.to_value() - attacker.to_value()) + CAPTURE_BASE_SCORE;
+    } else if m == killers.0 || m == killers.1 {
+        score += KILLER_SCORE;
     }
 
     match flag {
