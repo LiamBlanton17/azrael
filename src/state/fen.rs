@@ -55,6 +55,9 @@ impl Position {
             return Err(FENErrors::InvalidHalfMoves);
         }
 
+        // Set the initial psts on the position
+        p.recompute_psts();
+
         // Set zobrist hash
         p.set_zobrist();
 
@@ -277,6 +280,9 @@ use super::*;
                         Piece::Rook, Piece::Knight, Piece::Bishop, Piece::Queen, Piece::King, Piece::Bishop, Piece::Knight, Piece::Rook,
                     ],
                     zobrist: 0,
+                    pst_opening: 0,
+                    pst_endgame: 0,
+                    phase_material: 24,
                     half_moves: 0,
                     castling_rights: 0b1111,
                     en_passant: None,
@@ -284,7 +290,6 @@ use super::*;
                 }),
                 description: "starting position",
             },
-            // TODO: add more tests
         ];
 
         for test in tests {

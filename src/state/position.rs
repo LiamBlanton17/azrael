@@ -130,12 +130,14 @@ impl Position {
         self.pieces[this_piece.idx()] &= !orig_sq_bb;
         self.mailbox[orig_sq.idx()] = Piece::Empty;
         self.zobrist_spc(orig_sq, this_piece, this_turn);
+        self.pst_remove_piece(this_piece, this_turn, orig_sq);
 
         // If a piece sat on the destination square, this remove enemy piece from square
         if captured_piece != Piece::Empty {
             self.color[enemy_turn_idx] &= !dest_sq_bb;
             self.pieces[captured_piece.idx()] &= !dest_sq_bb;
             self.zobrist_spc(dest_sq, captured_piece, enemy_turn);
+            self.pst_remove_piece(captured_piece, enemy_turn, dest_sq);
         }
 
         // Reset the half-move clock on pawn moves and captures, or increment
@@ -158,6 +160,7 @@ impl Position {
                 self.pieces[promo_piece.idx()] |= dest_sq_bb;
                 self.mailbox[dest_sq.idx()] = promo_piece;
                 self.zobrist_spc(dest_sq, promo_piece, this_turn);
+                self.pst_add_piece(promo_piece, this_turn, dest_sq);
             },
             chess_move::MOVE_FLAG_CASTLE => {
                 // Move the king to the destination square
@@ -165,6 +168,7 @@ impl Position {
                 self.pieces[this_piece.idx()] |= dest_sq_bb;
                 self.mailbox[dest_sq.idx()] = this_piece;
                 self.zobrist_spc(dest_sq, this_piece, this_turn);
+                self.pst_add_piece(this_piece, this_turn, dest_sq);
 
                 // Move the rook to the far side of the king
                 let (rook_from, rook_to) = match dest_sq {
@@ -179,11 +183,13 @@ impl Position {
                 self.pieces[Piece::Rook.idx()] &= !rook_from.to_bitboard();
                 self.mailbox[rook_from.idx()] = Piece::Empty;
                 self.zobrist_spc(rook_from, Piece::Rook, this_turn);
+                self.pst_remove_piece(Piece::Rook, this_turn, rook_from);
 
                 self.color[this_turn_idx] |= rook_to.to_bitboard();
                 self.pieces[Piece::Rook.idx()] |= rook_to.to_bitboard();
                 self.mailbox[rook_to.idx()] = Piece::Rook;
                 self.zobrist_spc(rook_to, Piece::Rook, this_turn);
+                self.pst_add_piece(Piece::Rook, this_turn, rook_to);
             },
             chess_move::MOVE_FLAG_ENPASSANT => {
                 // Move the pawn to the destination
@@ -191,6 +197,7 @@ impl Position {
                 self.pieces[this_piece.idx()] |= dest_sq_bb;
                 self.mailbox[dest_sq.idx()] = this_piece;
                 self.zobrist_spc(dest_sq, this_piece, this_turn);
+                self.pst_add_piece(this_piece, this_turn, dest_sq);
 
                 // Remove the captured pawn, which sits at the interesect of the orig row and the dest column
                 let captured_sq = Square::from_row_col(orig_sq.to_row(), dest_sq.to_col());
@@ -199,6 +206,7 @@ impl Position {
                 self.pieces[Piece::Pawn.idx()] &= !captured_sq_bb;
                 self.mailbox[captured_sq.idx()] = Piece::Empty;
                 self.zobrist_spc(captured_sq, Piece::Pawn, enemy_turn);
+                self.pst_remove_piece(Piece::Pawn, enemy_turn, captured_sq);
             },
             _ => {
                 // Move piece to the destination
@@ -206,6 +214,7 @@ impl Position {
                 self.pieces[this_piece.idx()] |= dest_sq_bb;
                 self.mailbox[dest_sq.idx()] = this_piece;
                 self.zobrist_spc(dest_sq, this_piece, this_turn);
+                self.pst_add_piece(this_piece, this_turn, dest_sq);
 
                 // A double pawn push exposes an en passant target on the square it skipped over
                 if this_piece == Piece::Pawn && orig_sq.0.abs_diff(dest_sq.0) == 16 {
@@ -282,6 +291,7 @@ impl Position {
         self.pieces[this_piece.idx()] &= !dest_bb;
         self.mailbox[um.destination.idx()] = Piece::Empty;
         self.zobrist_spc(um.destination, this_piece, this_turn);
+        self.pst_remove_piece(this_piece, this_turn, um.destination);
 
         // restore any piece that was captured on the destination square
         if um.captured_piece != Piece::Empty {
@@ -289,6 +299,7 @@ impl Position {
             self.pieces[um.captured_piece.idx()] |= dest_bb;
             self.mailbox[um.destination.idx()] = um.captured_piece;
             self.zobrist_spc(um.destination, um.captured_piece, enemy_turn);
+            self.pst_add_piece(um.captured_piece, enemy_turn, um.destination);
         }
 
         match um.flag {
@@ -298,6 +309,7 @@ impl Position {
                 self.pieces[Piece::Pawn.idx()] |= orig_bb;
                 self.mailbox[um.origin.idx()] = Piece::Pawn;
                 self.zobrist_spc(um.origin, Piece::Pawn, this_turn);
+                self.pst_add_piece(Piece::Pawn, this_turn, um.origin);
             },
             chess_move::MOVE_FLAG_CASTLE => {
                 // Move the king back to the origin
@@ -305,6 +317,7 @@ impl Position {
                 self.pieces[this_piece.idx()] |= orig_bb;
                 self.mailbox[um.origin.idx()] = this_piece;
                 self.zobrist_spc(um.origin, this_piece, this_turn);
+                self.pst_add_piece(this_piece, this_turn, um.origin);
 
                 // Move the rook to the far side of the king
                 let (rook_from, rook_to) = match um.destination {
@@ -320,12 +333,14 @@ impl Position {
                 self.pieces[Piece::Rook.idx()] |= rook_from.to_bitboard();
                 self.mailbox[rook_from.idx()] = Piece::Rook;
                 self.zobrist_spc(rook_from, Piece::Rook, this_turn);
+                self.pst_add_piece(Piece::Rook, this_turn, rook_from);
 
                 // Remove the rook to the "rook to"
                 self.color[this_turn_idx] &= !rook_to.to_bitboard();
                 self.pieces[Piece::Rook.idx()] &= !rook_to.to_bitboard();
                 self.mailbox[rook_to.idx()] = Piece::Empty;
                 self.zobrist_spc(rook_to, Piece::Rook, this_turn);
+                self.pst_remove_piece(Piece::Rook, this_turn, rook_to);
             },
             chess_move::MOVE_FLAG_ENPASSANT => {
                 // Move piece back to the origin
@@ -333,6 +348,7 @@ impl Position {
                 self.pieces[this_piece.idx()] |= orig_bb;
                 self.mailbox[um.origin.idx()] = Piece::Pawn;
                 self.zobrist_spc(um.origin, Piece::Pawn, this_turn);
+                self.pst_add_piece(Piece::Pawn, this_turn, um.origin);
 
                 // Put the captured pawn back
                 let captured_sq = Square::from_row_col(um.origin.to_row(), um.destination.to_col());
@@ -341,6 +357,7 @@ impl Position {
                 self.pieces[Piece::Pawn.idx()] |= captured_sq_bb;
                 self.mailbox[captured_sq.idx()] = Piece::Pawn;
                 self.zobrist_spc(captured_sq, Piece::Pawn, enemy_turn);
+                self.pst_add_piece(Piece::Pawn, enemy_turn, captured_sq);
             },
             _ => {
                 // Move piece back to the origin
@@ -348,6 +365,7 @@ impl Position {
                 self.pieces[this_piece.idx()] |= orig_bb;
                 self.mailbox[um.origin.idx()] = this_piece;
                 self.zobrist_spc(um.origin, this_piece, this_turn);
+                self.pst_add_piece(this_piece, this_turn, um.origin);
             },
         }
     }

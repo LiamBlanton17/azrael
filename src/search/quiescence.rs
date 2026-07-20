@@ -14,7 +14,7 @@ pub fn quiescence(
 
     // stand-pat: assume the side to move can "do nothing" and take the current eval
     // this prevents forcing a bad capture when just standing still is better
-    let stand_pat = p.eval_relative();
+    let stand_pat = p.eval_relative(alpha, beta);
     if stand_pat >= beta {
         return (stand_pat, 0, 1);
     }

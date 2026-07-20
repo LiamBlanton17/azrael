@@ -29,6 +29,11 @@ pub struct Position {
     // Zobrist hash of the position
     pub zobrist: ZobristHash,
 
+    // Incremental evaluation based on psts tables and the phase of game based on pieces in play
+    pub pst_opening: i32,
+    pub pst_endgame: i32,
+    pub phase_material: i32,
+
     // Half move counter (won't exceed 100)
     pub half_moves: u8,
 
@@ -50,6 +55,9 @@ impl Default for Position {
             color: Default::default(),
             mailbox: [Piece::default(); 64],
             zobrist: Default::default(),
+            pst_opening: 0,
+            pst_endgame: 0,
+            phase_material: 0,
             half_moves: 0,
             castling_rights: 0,
             en_passant: None,

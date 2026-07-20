@@ -5,6 +5,7 @@ use crate::types::color::Color;
 use crate::types::eval::Eval;
 use crate::types::piece::Piece;
 use crate::types::position::Position;
+use crate::types::square::Square;
 
 use pst::{ENDGAME, OPENING, PST};
 
@@ -27,9 +28,18 @@ const TOTAL_PHASE: i32 = PAWN_PHASE * 16 + KNIGHT_PHASE * 4 + BISHOP_PHASE * 4 +
 
 impl Position {
 
-    pub fn eval(&self) -> Eval {
+    pub fn eval(&self, lazy_eval: bool, alpha: Eval, beta: Eval) -> Eval {
         let phase = get_phase_score(self);
         let mut eval = pst_eval(self, phase);
+        if lazy_eval { // if clearly outside of a/b with margin, return only the lazy pst eval
+            let margin = 150; // 150 centipawns
+            if eval - margin >= beta {
+                return eval;
+            }
+            if eval + margin <= alpha {
+                return eval;
+            }
+        }
         eval += pawn_structure_eval(self, phase);
         eval += bishop_pair_eval(self, phase);
         eval += tempo_eval(self, phase);
@@ -39,13 +49,83 @@ impl Position {
         eval
     }
 
-    pub fn eval_relative(&self) -> Eval {
+    pub fn eval_relative(&self, alpha: Eval, beta: Eval) -> Eval {
         match self.turn  {
-            Color::White => self.eval(),
-            Color::Black => -self.eval(),
+            Color::White => self.eval(true, alpha, beta),
+            Color::Black => -self.eval(true, alpha, beta),
         }
     }
 
+    // Add a piece from the pst scores
+    #[inline]
+    pub fn pst_add_piece(&mut self, piece: Piece, color: Color, sq: Square) {
+        let piece_idx = piece.idx();
+        let (idx, sign) = match color {
+            Color::White => (sq.idx(), 1),
+            Color::Black => (sq.idx() ^ 56, -1),
+        };
+        self.pst_opening += sign * PST[OPENING][piece_idx][idx] as i32;
+        self.pst_endgame += sign * PST[ENDGAME][piece_idx][idx] as i32;
+        self.phase_material += phase_weight(piece);
+    }
+
+    // Remove a piece from the pst scores
+    #[inline]
+    pub fn pst_remove_piece(&mut self, piece: Piece, color: Color, sq: Square) {
+        let piece_idx = piece.idx();
+        let (idx, sign) = match color {
+            Color::White => (sq.idx(), 1),
+            Color::Black => (sq.idx() ^ 56, -1),
+        };
+        self.pst_opening -= sign * PST[OPENING][piece_idx][idx] as i32;
+        self.pst_endgame -= sign * PST[ENDGAME][piece_idx][idx] as i32;
+        self.phase_material -= phase_weight(piece);
+    }
+
+    // Recompute the psts from scratch - used once at board setup
+    pub fn recompute_psts(&mut self) {
+        let (opening, endgame, phase_material) = self.compute_psts();
+        self.pst_opening = opening;
+        self.pst_endgame = endgame;
+        self.phase_material = phase_material;
+    }
+
+    // Pure from-scratch computation of the psts 
+    pub fn compute_psts(&self) -> (i32, i32, i32) {
+        let mut opening: i32 = 0;
+        let mut endgame: i32 = 0;
+        let mut phase_material: i32 = 0;
+
+        for color in [Color::White, Color::Black] {
+            for piece in [Piece::Pawn, Piece::Knight, Piece::Bishop, Piece::Rook, Piece::Queen, Piece::King] {
+                let pi = piece.idx();
+                for sq in self.get_piece(piece, color) {
+                    let (idx, sign) = match color {
+                        Color::White => (sq.idx(), 1),
+                        Color::Black => (sq.idx() ^ 56, -1),
+                    };
+                    opening += sign * PST[OPENING][pi][idx] as i32;
+                    endgame += sign * PST[ENDGAME][pi][idx] as i32;
+                    phase_material += phase_weight(piece);
+                }
+            }
+        }
+
+        (opening, endgame, phase_material)
+    }
+
+}
+
+// Game-phase weight of a piece
+#[inline]
+fn phase_weight(piece: Piece) -> i32 {
+    match piece {
+        Piece::Knight => KNIGHT_PHASE,
+        Piece::Bishop => BISHOP_PHASE,
+        Piece::Rook => ROOK_PHASE,
+        Piece::Queen => QUEEN_PHASE,
+        _ => 0,
+    }
 }
 
 // Give a slight bonus for tempo, slight better later in game
@@ -200,49 +280,12 @@ fn bishop_pair_eval(p: &Position, phase: i32) -> Eval {
 
 // Get a PST evaluation of the position, based on phase of game
 fn pst_eval(p: &Position, phase: i32) -> Eval {
-    let mut opening: Eval = 0;
-    let mut endgame: Eval = 0;
-
-    for piece in [
-        Piece::Pawn,
-        Piece::Knight,
-        Piece::Bishop,
-        Piece::Rook,
-        Piece::Queen,
-        Piece::King,
-    ] {
-        let pi = piece.idx();
-
-        // White reads the table directly.
-        for sq in p.get_piece(piece, Color::White) {
-            opening += PST[OPENING][pi][sq.idx()];
-            endgame += PST[ENDGAME][pi][sq.idx()];
-        }
-
-        // Black mirrors the square vertically (sq ^ 56) and subtracts.
-        for sq in p.get_piece(piece, Color::Black) {
-            opening -= PST[OPENING][pi][sq.idx() ^ 56];
-            endgame -= PST[ENDGAME][pi][sq.idx() ^ 56];
-        }
-    }
-
-    interpolate_phase(phase, opening, endgame)
+    ((p.pst_opening * (256 - phase) + p.pst_endgame * phase) / 256) as Eval
 }
 
 // Game phase in [0, 256], where 0 is the opening and 256 is the endgame
 fn get_phase_score(p: &Position) -> i32 {
-    let mut phase = TOTAL_PHASE;
-
-    for (piece, weight) in [
-        (Piece::Pawn, PAWN_PHASE),
-        (Piece::Knight, KNIGHT_PHASE),
-        (Piece::Bishop, BISHOP_PHASE),
-        (Piece::Rook, ROOK_PHASE),
-        (Piece::Queen, QUEEN_PHASE),
-    ] {
-        let count = (p.get_piece(piece, Color::White).0.count_ones() + p.get_piece(piece, Color::Black).0.count_ones()) as i32;
-        phase -= count * weight;
-    }
+    let phase = TOTAL_PHASE - p.phase_material;
 
     // Normalize to range [0, 256] (0 = opening, 256 = endgame)
     (phase * 256 + (TOTAL_PHASE / 2)) / TOTAL_PHASE
