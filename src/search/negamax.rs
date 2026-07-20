@@ -9,10 +9,6 @@ use crate::types::color::Color;
 use crate::types::eval::{self, Eval, MATE, score_from_tt, score_to_tt};
 use crate::types::position::{Position, ZobristHash};
 
-pub static mut order_of_moves_played: u64 = 0;
-pub static mut first_moves_played: u64 = 0;
-pub static mut moves_played: u64 = 0;
-pub static mut cutoffs: u64 = 0;
 
 // Return eval, move, negamax nodes, quiescence nodes
 pub fn negamax(
@@ -124,11 +120,6 @@ pub fn negamax(
         // alpha-beta cutoff
         if alpha >= beta {
 
-            // Move order efficiency tracking - remove in future
-            unsafe { order_of_moves_played += i as u64; }
-            unsafe { if i == 0 { first_moves_played += 1; }}
-            unsafe { cutoffs += 1; }
-
             // If is not a capture, add to history_heuristic
             // If not a killer, add to killers
             if !is_capture_move {
@@ -155,9 +146,6 @@ pub fn negamax(
         }
     }
     history.pop();
-
-    // Move order efficiency tracking - remove in future
-    unsafe { moves_played += 1; }
 
     if !found_legal_move {
         if in_check {

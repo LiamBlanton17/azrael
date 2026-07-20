@@ -170,7 +170,7 @@ pub fn strength_test() {
     };
 
     // the time limits each position is searched at -- metrics are tracked separately per limit
-    const DEPTH_LIMITS: [usize; 5] = [3, 5, 7, 9, 11];
+    const DEPTH_LIMITS: [usize; 3] = [7, 9, 11];
     const NUM_LIMITS: usize = DEPTH_LIMITS.len();
 
     // one accumulator slot per time limit
@@ -280,23 +280,6 @@ pub fn strength_test() {
         println!("ABF: {:.2}", (total_abf[i] / tests_run as f64));
     }
 
-    // Move ordering summary -- cumulative over every search in this run.
-    // Good ordering means most beta cutoffs land on the first move tried, so a
-    // high first-move rate and a low average moves-before-cutoff are what we want.
-    unsafe {
-        let cutoffs = crate::search::negamax::cutoffs;
-        let first_moves_played = crate::search::negamax::first_moves_played;
-        let order_of_moves_played = crate::search::negamax::order_of_moves_played;
-        println!("\n--- Move Ordering ---");
-        println!("Total nodes: {}", crate::format_with_commas(crate::search::negamax::moves_played));
-        println!("Beta cutoffs: {}", crate::format_with_commas(cutoffs));
-        if cutoffs > 0 {
-            let first_move_rate = first_moves_played as f64 / cutoffs as f64;
-            let avg_moves_before_cutoff = order_of_moves_played as f64 / cutoffs as f64 + 1.0;
-            println!("First-move cutoffs: {}/{} ({:.2})", first_moves_played, cutoffs, first_move_rate);
-            println!("Avg. moves searched before cutoff: {:.2}", avg_moves_before_cutoff);
-        }
-    }
 }
 
 fn abf_estimate(nodes: u64, depth: usize) -> f64 {
