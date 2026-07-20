@@ -99,9 +99,10 @@ pub fn negamax(
                 (0, 0, 0)
             } else {
                 // Apply LMR - https://www.chessprogramming.org/Late_Move_Reductions
-                let reduction = lmr_reduction(depth, i, is_capture_move, in_check);
-                let (e, _, n, qn1) = negamax(p, depth - 1 - reduction, ply + 1, -beta, -alpha, move_stack, history, killers, history_heuristic, tt);
-                if reduction > 0 && -e > alpha {
+                let reduction = lmr_reduction(depth, i, in_check);
+                let (new_a, new_b) = if i > 0 { (-alpha-1, -alpha) } else { (-beta, -alpha) };
+                let (e, _, n, qn1) = negamax(p, depth - 1 - reduction, ply + 1, new_a, new_b, move_stack, history, killers, history_heuristic, tt);
+                if i > 0 && -e > alpha && -e < beta {
                     let (e, _, n, qn2) = negamax(p, depth - 1, ply + 1, -beta, -alpha, move_stack, history, killers, history_heuristic, tt);
                     (-e, n, qn1 + qn2)
                 } else {
@@ -179,8 +180,8 @@ pub fn negamax(
 
 }
 
-fn lmr_reduction(depth: usize, move_index: usize, is_capture_move: bool, in_check: bool) -> usize {
-    if (depth < 3 || move_index < 3) && !is_capture_move && !in_check {
+fn lmr_reduction(depth: usize, move_index: usize, in_check: bool) -> usize {
+    if (depth < 3 || move_index < 3) && !in_check {
         return 0; // don't reduce near the root of reduction eligibility
     }
 
