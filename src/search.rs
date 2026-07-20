@@ -40,8 +40,8 @@ impl Position {
 
 const TIME_SEARCH_EXPECTED_MAX_DEPTH: usize = 32;  // Prepare allocation for up to a depth of 32, will allocate more if needed (very unlikely)
 
-// Main breanch from root_search - if best_move is stable for 3 iterations in a row, or a time budget is exceeded
-// Stable is defined as the same best move and the best eval not moving more than 10 centipawns
+// Main breanch from root_search - if best_move is stable for 4 iterations in a row, or a time budget is exceeded
+// Stable is defined as the same best move and the best eval not moving more than 8 centipawns
 const STABLE_ITERATION_THRESHOLD: u8 = 4;
 const STABLE_EVAL_THRESHOLD: Eval = 8;
 fn stable_time_search(p: &mut Position, budget: Duration, tt: &mut TranspositionTable) -> (Eval, Move, u64, u64, usize) {
@@ -68,7 +68,26 @@ fn stable_time_search(p: &mut Position, budget: Duration, tt: &mut Transposition
 
         // negamax search to this depth
         let last_search_start = Instant::now();
-        let (e, m, n, qn) = negamax(p, depth, 0, -MATE, MATE, &mut move_stack, &mut history, &mut killers, &mut history_heuristic, tt);
+        let (e, m, n, qn) = if depth <= 4 {
+            negamax(p, depth, 0, -MATE, MATE, &mut move_stack, &mut history, &mut killers, &mut history_heuristic, tt)
+        } else {
+            let mut window: i32 = 25;
+            let mut asp_n = 0;
+            let mut asp_qn = 0;
+            loop {
+                let alpha = (best_eval as i32 - window).max(-(MATE as i32)) as Eval;
+                let beta  = (best_eval as i32 + window).min(  MATE as i32) as Eval;
+                let (e, m, n, qn) = negamax(p, depth, 0, alpha, beta, &mut move_stack, &mut history, &mut killers, &mut history_heuristic, tt);
+                asp_n += n;
+                asp_qn += qn;
+                // re-search only if we failed AND still have room to widen
+                if (e <= alpha && alpha > -(MATE)) || (e >= beta && beta < MATE) {
+                    window *= 4;
+                    continue;
+                }
+                break (e, m, asp_n, asp_qn);
+            }
+        };
         last_search_time = last_search_start.elapsed();
 
         // if stable from last iteration, increment and break if now 3 iterations stable (don't count depths 1-3)
@@ -117,7 +136,26 @@ fn time_search(p: &mut Position, budget: Duration, tt: &mut TranspositionTable) 
 
         // negamax search to this depth
         let last_search_start = Instant::now();
-        let (e, m, n, qn) = negamax(p, depth, 0, -MATE, MATE, &mut move_stack, &mut history, &mut killers, &mut history_heuristic, tt);
+        let (e, m, n, qn) = if depth <= 4 {
+            negamax(p, depth, 0, -MATE, MATE, &mut move_stack, &mut history, &mut killers, &mut history_heuristic, tt)
+        } else {
+            let mut window: i32 = 25;
+            let mut asp_n = 0;
+            let mut asp_qn = 0;
+            loop {
+                let alpha = (best_eval as i32 - window).max(-(MATE as i32)) as Eval;
+                let beta  = (best_eval as i32 + window).min(  MATE as i32) as Eval;
+                let (e, m, n, qn) = negamax(p, depth, 0, alpha, beta, &mut move_stack, &mut history, &mut killers, &mut history_heuristic, tt);
+                asp_n += n;
+                asp_qn += qn;
+                // re-search only if we failed AND still have room to widen
+                if (e <= alpha && alpha > -(MATE)) || (e >= beta && beta < MATE) {
+                    window *= 4;
+                    continue;
+                }
+                break (e, m, asp_n, asp_qn);
+            }
+        };
         last_search_time = last_search_start.elapsed();
         best_eval = e;
         best_move = m;
@@ -149,7 +187,27 @@ fn stable_depth_search(p: &mut Position, depth: usize, tt: &mut TranspositionTab
         actual_depth_reached = d;
 
         // negamax search to this depth
-        let (e, m, n, qn) = negamax(p, d, 0, -MATE, MATE, &mut move_stack, &mut history, &mut killers, &mut history_heuristic, tt);
+        let (e, m, n, qn) = if d <= 4 {
+            negamax(p, d, 0, -MATE, MATE, &mut move_stack, &mut history, &mut killers, &mut history_heuristic, tt)
+        } else {
+            let mut window: i32 = 25;
+            let mut asp_n = 0;
+            let mut asp_qn = 0;
+            loop {
+                let alpha = (best_eval as i32 - window).max(-(MATE as i32)) as Eval;
+                let beta  = (best_eval as i32 + window).min(  MATE as i32) as Eval;
+                let (e, m, n, qn) = negamax(p, depth, 0, alpha, beta, &mut move_stack, &mut history, &mut killers, &mut history_heuristic, tt);
+                asp_n += n;
+                asp_qn += qn;
+                // re-search only if we failed AND still have room to widen
+                if (e <= alpha && alpha > -(MATE)) || (e >= beta && beta < MATE) {
+                    window *= 4;
+                    continue;
+                }
+                break (e, m, asp_n, asp_qn);
+            }
+        };
+
         
         // if stable from last iteration, increment and break if now 3 iterations stable (don't count depths 1-3)
         if m == best_move && (best_eval - e).abs() <= STABLE_EVAL_THRESHOLD && depth > 3 {
@@ -190,7 +248,27 @@ fn depth_search(p: &mut Position, depth: usize, tt: &mut TranspositionTable) -> 
         history.clear();
 
         // negamax search to this depth
-        let (e, m, n, qn) = negamax(p, d, 0, -MATE, MATE, &mut move_stack, &mut history, &mut killers, &mut history_heuristic, tt);
+        let (e, m, n, qn) = if d <= 4 {
+            negamax(p, d, 0, -MATE, MATE, &mut move_stack, &mut history, &mut killers, &mut history_heuristic, tt)
+        } else {
+            let mut window: i32 = 25;
+            let mut asp_n = 0;
+            let mut asp_qn = 0;
+            loop {
+                let alpha = (best_eval as i32 - window).max(-(MATE as i32)) as Eval;
+                let beta  = (best_eval as i32 + window).min(  MATE as i32) as Eval;
+                let (e, m, n, qn) = negamax(p, depth, 0, alpha, beta, &mut move_stack, &mut history, &mut killers, &mut history_heuristic, tt);
+                asp_n += n;
+                asp_qn += qn;
+                // re-search only if we failed AND still have room to widen
+                if (e <= alpha && alpha > -(MATE)) || (e >= beta && beta < MATE) {
+                    window *= 4;
+                    continue;
+                }
+                break (e, m, asp_n, asp_qn);
+            }
+        };
+
         best_eval = e;
         best_move = m;
         total_nodes += n;

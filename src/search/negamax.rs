@@ -99,9 +99,9 @@ pub fn negamax(
                 (0, 0, 0)
             } else {
                 // Apply LMR - https://www.chessprogramming.org/Late_Move_Reductions
-                let reduction = lmr_reduction(depth, i, in_check);
+                let relative_depth = get_relative_depth(depth, i, in_check);
                 let (new_a, new_b) = if i > 0 { (-alpha-1, -alpha) } else { (-beta, -alpha) };
-                let (e, _, n, qn1) = negamax(p, depth - 1 - reduction, ply + 1, new_a, new_b, move_stack, history, killers, history_heuristic, tt);
+                let (e, _, n, qn1) = negamax(p, relative_depth, ply + 1, new_a, new_b, move_stack, history, killers, history_heuristic, tt);
                 if i > 0 && -e > alpha && -e < beta {
                     let (e, _, n, qn2) = negamax(p, depth - 1, ply + 1, -beta, -alpha, move_stack, history, killers, history_heuristic, tt);
                     (-e, n, qn1 + qn2)
@@ -180,16 +180,22 @@ pub fn negamax(
 
 }
 
-fn lmr_reduction(depth: usize, move_index: usize, in_check: bool) -> usize {
-    if (depth < 3 || move_index < 3) && !in_check {
-        return 0; // don't reduce near the root of reduction eligibility
+fn get_relative_depth(depth: usize, move_index: usize, in_check: bool) -> usize {
+    // if in check and at a low depth, extend the search by 1 ply 
+    if in_check && depth < 3 {
+        return depth; 
     }
 
-    let d = (depth as f64).ln();
-    let i = (move_index as f64).ln();
-    
+    // low move index or low depth - just search depth - 1 as normal
+    if depth < 3 || move_index < 3 {
+        return depth - 1;
+    }
+
+    // LMR
     // https://www.chessprogramming.org/Late_Move_Reductions
     // Obsidian reduces by 0.99 + ln(depth) * ln(moves) / 3.14
+    let d = (depth as f64).ln();
+    let i = (move_index as f64).ln();
     let r = 0.99 + d * i / 3.14;
     (r.round() as usize).min(depth - 1)
 }

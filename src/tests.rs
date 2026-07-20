@@ -170,7 +170,7 @@ pub fn strength_test() {
     };
 
     // the time limits each position is searched at -- metrics are tracked separately per limit
-    const DEPTH_LIMITS: [usize; 5] = [2, 3, 4, 5, 6];
+    const DEPTH_LIMITS: [usize; 5] = [3, 5, 7, 9, 11];
     const NUM_LIMITS: usize = DEPTH_LIMITS.len();
 
     // one accumulator slot per time limit
