@@ -35,47 +35,49 @@ A move, just like a board, needs to have as small as a memory footprint as possi
 When generating moves for the chess engine, it will be designed explicity from the start to allow generation of captures, non-captures, or both for each piece type and the position as a whole. This can dramatically speed up the engine, as we can position not generate a large portion of moves, where a capture causes a cutoff.
 
 ## Last Strength Test Run (7/14/2026)
---- Time Limit: 10ms ---
-Score: 3218/6770 (0.48)
+--- Depth Limit: 3 ---
+Score: 2821/6770 (0.42)
+Best moves found: 187/677 (0.28)
+Search time: 634.7564ms
+Total nodes: 4,286,240
+Avg. Depth: 3.00
+MN/S: 6.75
+EBF: 5.56
+
+--- Depth Limit: 4 ---
+Score: 3220/6770 (0.48)
 Best moves found: 218/677 (0.32)
-Search time: 4.5149094s
-Total nodes: 33,121,527
-Avg. Depth: 5.26
-MN/S: 7.34
-EBF: 4.51
+Search time: 3.1567776s
+Total nodes: 21,080,477
+Avg. Depth: 4.00
+MN/S: 6.68
+EBF: 6.48
 
---- Time Limit: 50ms ---
-Score: 3508/6770 (0.52)
-Best moves found: 254/677 (0.38)
-Search time: 23.7357071s
-Total nodes: 160,879,013
-Avg. Depth: 6.50
-MN/S: 6.78
-EBF: 4.45
+--- Depth Limit: 6 ---
+Score: 3456/6770 (0.51)
+Best moves found: 251/677 (0.37)
+Search time: 33.2961555s
+Total nodes: 239,791,179
+Avg. Depth: 5.57
+MN/S: 7.20
+EBF: 5.99
 
---- Time Limit: 250ms ---
-Score: 3652/6770 (0.54)
-Best moves found: 277/677 (0.41)
-Search time: 94.1130628s
-Total nodes: 734,715,366
-Avg. Depth: 7.63
-MN/S: 7.81
-EBF: 4.48
 
---- Time Limit: 1s ---
-Score: 3960/6770 (0.58)
-Best moves found: 303/677 (0.45)
-Search time: 456.0947882s
-Total nodes: 3,237,091,037
-Avg. Depth: 8.74
-MN/S: 7.10
-EBF: 4.47
+--- Depth Limit: 6 ---
+Score: 3463/6770 (0.51)
+Best moves found: 251/677 (0.37)
+Search time: 17.2173085s
+Total nodes: 130,456,099
+Avg. Depth: 5.57
+MN/S: 7.58
+EBF: 5.40
 
---- Time Limit: 2.5s ---
-Score: 4050/6770 (0.60)
-Best moves found: 305/677 (0.45)
-Search time: 1603.6033653s
-Total nodes: 12,802,516,548
-Avg. Depth: 9.75
-MN/S: 7.98
-EBF: 4.41
+
+--- Depth Limit: 6 ---
+Score: 3040/6770 (0.45)
+Best moves found: 210/677 (0.31)
+Search time: 3.1336319s
+Total nodes: 21,311,676
+Avg. Depth: 5.94
+MN/S: 6.80
+ABF: 3.42

@@ -5,8 +5,14 @@ use crate::search::move_ordering::KILLER_SCORE;
 use crate::search::quiescence::quiescence;
 use crate::search::tt::{Bound, TranspositionTable};
 use crate::types::chess_move::{Move, split_move};
+use crate::types::color::Color;
 use crate::types::eval::{self, Eval, MATE, score_from_tt, score_to_tt};
 use crate::types::position::{Position, ZobristHash};
+
+pub static mut order_of_moves_played: u64 = 0;
+pub static mut first_moves_played: u64 = 0;
+pub static mut moves_played: u64 = 0;
+pub static mut cutoffs: u64 = 0;
 
 // Return eval, move, negamax nodes, quiescence nodes
 pub fn negamax(
@@ -44,6 +50,27 @@ pub fn negamax(
         }
     }
 
+    // Check if the king is in check in this position
+    p.turn = p.turn.flip();
+    let in_check = p.can_kill_king();
+    p.turn = p.turn.flip();
+
+    // Null Move Pruning
+    // https://www.chessprogramming.org/Null_Move_Pruning
+    if ply > 2 && depth >= 3 {
+        let count_material = (p.color[Color::White.idx()] | p.color[Color::Black.idx()]).0.count_ones(); // Must have at least 12 non-king pieces
+        if !in_check && count_material > 14 {
+            let r = 2 + (depth / 5); // null-move reduction
+            let um = p.make_null_move();
+            let (e, _, n, qn) = negamax(p, depth - 1 - r, ply + 1, -beta, -(beta - 1), move_stack, history, killers, history_heuristic, tt);
+            p.undo_null_move(um);
+            let e = -e;
+            if e >= beta {
+                return (beta, 0, n + 1, qn);
+            }
+        }
+    }
+
     ensure_move_stack_len(move_stack, ply);
     if killers.len() <= ply {
         killers.resize(ply + 1, (0, 0));
@@ -63,6 +90,7 @@ pub fn negamax(
         let m = move_stack[ply][i];
 
         // play and make sure this is a legal move
+        let is_capture_move = p.is_move_capture(m);
         let um = p.make_move(m);
         let is_legal_move = !p.can_kill_king();
         if is_legal_move {
@@ -70,8 +98,15 @@ pub fn negamax(
             let (e, n, qn) = if p.is_fifty_move_rule() || p.is_three_fold(history) {
                 (0, 0, 0)
             } else {
-                let (e, _, n, qn) = negamax(p, depth - 1, ply + 1, -beta, -alpha, move_stack, history, killers, history_heuristic, tt);
-                (-e, n, qn)
+                // Apply LMR - https://www.chessprogramming.org/Late_Move_Reductions
+                let reduction = lmr_reduction(depth, i, is_capture_move, in_check);
+                let (e, _, n, qn1) = negamax(p, depth - 1 - reduction, ply + 1, -beta, -alpha, move_stack, history, killers, history_heuristic, tt);
+                if reduction > 0 && -e > alpha {
+                    let (e, _, n, qn2) = negamax(p, depth - 1, ply + 1, -beta, -alpha, move_stack, history, killers, history_heuristic, tt);
+                    (-e, n, qn1 + qn2)
+                } else {
+                    (-e, n, qn1)
+                }
             };
             nodes += n;
             q_nodes += qn;
@@ -88,9 +123,14 @@ pub fn negamax(
         // alpha-beta cutoff
         if alpha >= beta {
 
+            // Move order efficiency tracking - remove in future
+            unsafe { order_of_moves_played += i as u64; }
+            unsafe { if i == 0 { first_moves_played += 1; }}
+            unsafe { cutoffs += 1; }
+
             // If is not a capture, add to history_heuristic
             // If not a killer, add to killers
-            if !p.is_move_capture(m) {
+            if !is_capture_move {
                 let (dest, origin, _, _) = split_move(m);
                 history_heuristic[origin.idx()][dest.idx()] = min(
                     history_heuristic[origin.idx()][dest.idx()] + (depth * depth) as i16,
@@ -104,7 +144,7 @@ pub fn negamax(
             break;
         } else {
             // decrement history if it didn't cause a cutoff
-            if !p.is_move_capture(m) {
+            if !is_capture_move {
                 let (dest, origin, _, _) = split_move(m);
                 history_heuristic[origin.idx()][dest.idx()] = max(
                     history_heuristic[origin.idx()][dest.idx()] - (depth * depth) as i16,
@@ -115,10 +155,10 @@ pub fn negamax(
     }
     history.pop();
 
+    // Move order efficiency tracking - remove in future
+    unsafe { moves_played += 1; }
+
     if !found_legal_move {
-        p.turn = p.turn.flip();
-        let in_check = p.can_kill_king();
-        p.turn = p.turn.flip();
         if in_check {
             (-MATE + ply as i16, 0, nodes, q_nodes)
         } else {
@@ -137,4 +177,18 @@ pub fn negamax(
         (best_eval, best_move, nodes, q_nodes)
     }
 
+}
+
+fn lmr_reduction(depth: usize, move_index: usize, is_capture_move: bool, in_check: bool) -> usize {
+    if (depth < 3 || move_index < 3) && !is_capture_move && !in_check {
+        return 0; // don't reduce near the root of reduction eligibility
+    }
+
+    let d = (depth as f64).ln();
+    let i = (move_index as f64).ln();
+    
+    // https://www.chessprogramming.org/Late_Move_Reductions
+    // Obsidian reduces by 0.99 + ln(depth) * ln(moves) / 3.14
+    let r = 0.99 + d * i / 3.14;
+    (r.round() as usize).min(depth - 1)
 }

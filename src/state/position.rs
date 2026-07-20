@@ -352,6 +352,54 @@ impl Position {
         }
     }
 
+    // A null move hands the turn to the opponent without moving a piece (used by null move
+    // pruning). Like make_move it keeps the zobrist hash in sync and returns the state needed to
+    // undo; only en_passant and half_moves change, so the movement fields of UnMove are unused.
+    pub fn make_null_move(&mut self) -> UnMove {
+        let um = UnMove {
+            en_passant: self.en_passant,
+            captured_piece: Piece::Empty,
+            origin: Square(0),
+            destination: Square(0),
+            flag: chess_move::MOVE_FLAG_NONE,
+            castling_rights: self.castling_rights,
+            half_moves: self.half_moves,
+        };
+
+        // Passing the turn clears any en passant target, removing its stale file from the hash.
+        if let Some(ep) = self.en_passant {
+            self.zobrist_enpassant(ep);
+        }
+        self.en_passant = None;
+
+        // A null move is neither a pawn move nor a capture.
+        self.half_moves += 1;
+
+        // Hand the turn to the opponent, toggling the side-to-move contribution.
+        self.turn = self.turn.flip();
+        self.zobrist_turn();
+
+        um
+    }
+
+    pub fn undo_null_move(&mut self, um: UnMove) {
+        // Restore the side-to-move contribution to match the flipped-back turn.
+        self.turn = self.turn.flip();
+        self.zobrist_turn();
+
+        // Swap the post-move en passant file out for the restored one.
+        if let Some(ep) = self.en_passant {
+            self.zobrist_enpassant(ep);
+        }
+        self.en_passant = um.en_passant;
+        if let Some(ep) = self.en_passant {
+            self.zobrist_enpassant(ep);
+        }
+
+        // reset half move counter
+        self.half_moves = um.half_moves;
+    }
+
     pub fn can_kill_king(&mut self) -> bool {
         // Called after make_move, so flip turn to see if that player's king is in check
         // Probably rename the function, bit confusing

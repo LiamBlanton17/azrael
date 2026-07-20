@@ -170,7 +170,7 @@ pub fn strength_test() {
     };
 
     // the time limits each position is searched at -- metrics are tracked separately per limit
-    const DEPTH_LIMITS: [usize; 3] = [3, 4, 6];
+    const DEPTH_LIMITS: [usize; 5] = [2, 3, 4, 5, 6];
     const NUM_LIMITS: usize = DEPTH_LIMITS.len();
 
     // one accumulator slot per time limit
@@ -178,7 +178,7 @@ pub fn strength_test() {
     let mut total_nodes = [0u64; NUM_LIMITS];
     let mut best_moves_found = [0u32; NUM_LIMITS];
     let mut total_search_duration = [Duration::new(0, 0); NUM_LIMITS];
-    let mut total_ebf = [0.0f64; NUM_LIMITS];
+    let mut total_abf = [0.0f64; NUM_LIMITS];
     let mut total_depth = [0usize; NUM_LIMITS];
 
     // these are per-position, shared across every time limit
@@ -257,10 +257,10 @@ pub fn strength_test() {
                 }
 
                 let (dest, orig, _, _) = split_move(best_move);
-                let ebf = ebf_estimate(nodes, actual_depth);
+                let abf = abf_estimate(nodes, actual_depth);
                 total_depth[i] += actual_depth;
-                total_ebf[i] += ebf;
-                println!("{:<15} engine played {}{} -> {}/{} -- {} nodes at depth {} (EBF {:.2})", test.id, orig, dest, scored, best_available, nodes, depth, ebf);
+                total_abf[i] += abf;
+                println!("{:<15} engine played {}{} -> {}/{} -- {} nodes at depth {} (ABF {:.2})", test.id, orig, dest, scored, best_available, nodes, depth, abf);
             }
             println!();
         }
@@ -277,11 +277,28 @@ pub fn strength_test() {
         println!("Total nodes: {}", crate::format_with_commas(total_nodes[i]));
         println!("Avg. Depth: {:.2}", (total_depth[i] as f64 / tests_run as f64));
         println!("MN/S: {:.2}", mnps);
-        println!("EBF: {:.2}", (total_ebf[i] / tests_run as f64));
+        println!("ABF: {:.2}", (total_abf[i] / tests_run as f64));
     }
-    println!();
+
+    // Move ordering summary -- cumulative over every search in this run.
+    // Good ordering means most beta cutoffs land on the first move tried, so a
+    // high first-move rate and a low average moves-before-cutoff are what we want.
+    unsafe {
+        let cutoffs = crate::search::negamax::cutoffs;
+        let first_moves_played = crate::search::negamax::first_moves_played;
+        let order_of_moves_played = crate::search::negamax::order_of_moves_played;
+        println!("\n--- Move Ordering ---");
+        println!("Total nodes: {}", crate::format_with_commas(crate::search::negamax::moves_played));
+        println!("Beta cutoffs: {}", crate::format_with_commas(cutoffs));
+        if cutoffs > 0 {
+            let first_move_rate = first_moves_played as f64 / cutoffs as f64;
+            let avg_moves_before_cutoff = order_of_moves_played as f64 / cutoffs as f64 + 1.0;
+            println!("First-move cutoffs: {}/{} ({:.2})", first_moves_played, cutoffs, first_move_rate);
+            println!("Avg. moves searched before cutoff: {:.2}", avg_moves_before_cutoff);
+        }
+    }
 }
 
-fn ebf_estimate(nodes: u64, depth: usize) -> f64 {
+fn abf_estimate(nodes: u64, depth: usize) -> f64 {
     (nodes as f64).powf(1.0 / depth as f64)
 }
