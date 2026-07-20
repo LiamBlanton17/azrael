@@ -23,7 +23,7 @@ pub fn quiescence(
     // static eval used as the base for delta pruning below; only meaningful when not in check
     let mut stand_pat = -MATE;
     if !in_check {
-        stand_pat = p.eval_relative(alpha, beta);
+        stand_pat = p.eval_relative_lazy(alpha, beta);
         if stand_pat >= beta {
             return (stand_pat, 0, 1);
         }

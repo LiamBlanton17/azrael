@@ -11,17 +11,17 @@ use pst::{ENDGAME, OPENING, PST};
 
 // Define material evaluations
 pub const PAWN: Eval = 100;
-pub const KNIGHT: Eval = 300;
-pub const BISHOP: Eval = 300;
-pub const ROOK: Eval = 500;
-pub const QUEEN: Eval = 900;
+pub const KNIGHT: Eval = 320;
+pub const BISHOP: Eval = 330;
+pub const ROOK: Eval = 515;
+pub const QUEEN: Eval = 945;
 
 // Weights for calculating game phase (Non-Pawn Material is standard).
 const PAWN_PHASE: i32 = 0;
-const KNIGHT_PHASE: i32 = 1;
-const BISHOP_PHASE: i32 = 1;
-const ROOK_PHASE: i32 = 2;
-const QUEEN_PHASE: i32 = 4;
+const KNIGHT_PHASE: i32 = 2;
+const BISHOP_PHASE: i32 = 2;
+const ROOK_PHASE: i32 = 5;
+const QUEEN_PHASE: i32 = 9;
 
 // The maximum possible phase
 const TOTAL_PHASE: i32 = PAWN_PHASE * 16 + KNIGHT_PHASE * 4 + BISHOP_PHASE * 4 + ROOK_PHASE * 4 + QUEEN_PHASE * 2;
@@ -49,10 +49,17 @@ impl Position {
         eval
     }
 
-    pub fn eval_relative(&self, alpha: Eval, beta: Eval) -> Eval {
+    pub fn eval_relative_lazy(&self, alpha: Eval, beta: Eval) -> Eval {
         match self.turn  {
             Color::White => self.eval(true, alpha, beta),
             Color::Black => -self.eval(true, alpha, beta),
+        }
+    }
+
+    pub fn eval_relative(&self) -> Eval {
+        match self.turn  {
+            Color::White => self.eval(false, 0, 0),
+            Color::Black => -self.eval(false, 0, 0),
         }
     }
 
@@ -144,10 +151,10 @@ fn king_safety_eval(p: &Position, phase: i32) -> Eval {
 
     // Phase scores: friendly shelter is worth more than enemy pressure per pawn, and enemy
     // pieces next to the king are as dangerous as enemy pawns.
-    let friendly_pawn_score = interpolate_phase(phase, 17, 0);
-    let enemy_pawn_score = interpolate_phase(phase, 15, 0);
-    let friendly_piece_score = interpolate_phase(phase, 5, 0);
-    let enemy_piece_score = interpolate_phase(phase, 19, 0);
+    let friendly_pawn_score = interpolate_phase(phase, 19, 5);
+    let enemy_pawn_score = interpolate_phase(phase, 17, 0);
+    let friendly_piece_score = interpolate_phase(phase, 3, 0);
+    let enemy_piece_score = interpolate_phase(phase, 22, 0);
 
     let white_occ = p.color[Color::White.idx()];
     let black_occ = p.color[Color::Black.idx()];
@@ -190,9 +197,9 @@ fn file_based_eval(p: &Position, phase: i32) -> Eval {
     let bonus_for_queen_your_semi = interpolate_phase(phase, 7, 14);
     let bonus_for_queen_opp_semi = interpolate_phase(phase, 4, 10);
     let bonus_for_queen_full = interpolate_phase(phase, 9, 17);
-    let penalty_for_king_your_semi = interpolate_phase(phase, 22, 0);
-    let penalty_for_king_opp_semi = interpolate_phase(phase, 17, 0);
-    let penalty_for_king_full = interpolate_phase(phase, 32, 0);
+    let penalty_for_king_your_semi = interpolate_phase(phase, 19, 0);
+    let penalty_for_king_opp_semi = interpolate_phase(phase, 14, 0);
+    let penalty_for_king_full = interpolate_phase(phase, 26, 0);
 
     let white_pawns = p.get_piece(Piece::Pawn, Color::White);
     let black_pawns = p.get_piece(Piece::Pawn, Color::Black);
@@ -271,7 +278,7 @@ fn file_based_eval(p: &Position, phase: i32) -> Eval {
 fn bishop_pair_eval(p: &Position, phase: i32) -> Eval {
     let count_white_bishops = p.get_piece(Piece::Bishop, Color::White).0.count_ones();
     let count_black_bishops = p.get_piece(Piece::Bishop, Color::Black).0.count_ones();
-    let bishop_pair_bonus = interpolate_phase(phase, 14, 29);
+    let bishop_pair_bonus = interpolate_phase(phase, 24, 42);
 
     let mut eval = if count_white_bishops > 1 { bishop_pair_bonus } else { 0 };
     eval -= if count_black_bishops > 1 { bishop_pair_bonus } else { 0 };

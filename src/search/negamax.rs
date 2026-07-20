@@ -1,4 +1,5 @@
 use std::cmp::{max, min};
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::search::move_generation::{ensure_move_stack_len, MoveGenLevel};
 use crate::search::move_ordering::KILLER_SCORE;
@@ -8,6 +9,15 @@ use crate::types::chess_move::{Move, split_move};
 use crate::types::color::Color;
 use crate::types::eval::{self, Eval, MATE, score_from_tt, score_to_tt};
 use crate::types::position::{Position, ZobristHash};
+
+
+// Razoring metrics (global, atomic so they are safe if the search ever goes parallel).
+// ATTEMPTS: times the razor margin passed and we dropped into quiescence.
+// CUTOFFS:  times that quiescence confirmed the node was hopeless and we pruned (razoring "worked").
+// FAILS:    times quiescence came back >= alpha, so the drop was wasted and we searched anyway.
+pub static RAZOR_ATTEMPTS: AtomicU64 = AtomicU64::new(0);
+pub static RAZOR_CUTOFFS: AtomicU64 = AtomicU64::new(0);
+pub static RAZOR_FAILS: AtomicU64 = AtomicU64::new(0);
 
 
 // Return eval, move, negamax nodes, quiescence nodes
@@ -23,10 +33,6 @@ pub fn negamax(
     history_heuristic: &mut [[i16; 64]; 64],
     tt: &mut TranspositionTable,
 ) -> (Eval, Move, u64, u64) {
-    if depth == 0 {
-        let (e, m, q_nodes) = quiescence(p, ply, alpha, beta, move_stack, history, history_heuristic);
-        return (e, m, 0, q_nodes);
-    }
 
     // Probe the transposition table 
     let alpha_orig = alpha;
@@ -46,10 +52,35 @@ pub fn negamax(
         }
     }
 
+    // if at depth, run the quiescence search
+    if depth == 0 {
+        let (e, m, q_nodes) = quiescence(p, ply, alpha, beta, move_stack, history, history_heuristic);
+        return (e, m, 0, q_nodes);
+    }
+
     // Check if the king is in check in this position
     p.turn = p.turn.flip();
     let in_check = p.can_kill_king();
     p.turn = p.turn.flip();
+
+    // Razoring - at low depths drop into a quiescence if decent margin from alpha
+    let stand_pat;
+    const RAZOR_MARGIN: Eval = 185;
+    const RAZOR_DEPTH: usize = 2;
+    let mut razor_q_nodes = 0;
+    if depth <= RAZOR_DEPTH && !in_check {
+        stand_pat = p.eval_relative();
+        if stand_pat + RAZOR_MARGIN * (depth as Eval) < alpha {
+            RAZOR_ATTEMPTS.fetch_add(1, Ordering::Relaxed);
+            let (e, m, q_nodes) = quiescence(p, ply, alpha, beta, move_stack, history, history_heuristic);
+            if e < alpha {
+                RAZOR_CUTOFFS.fetch_add(1, Ordering::Relaxed);
+                return (e, m, 0, q_nodes);
+            }
+            RAZOR_FAILS.fetch_add(1, Ordering::Relaxed);
+            razor_q_nodes = q_nodes;
+        }
+    }
 
     // Null Move Pruning
     // https://www.chessprogramming.org/Null_Move_Pruning
@@ -77,7 +108,7 @@ pub fn negamax(
     history.push(p.zobrist);
 
     // recursive negamax search
-    let mut q_nodes = 0;
+    let mut q_nodes = razor_q_nodes;
     let mut nodes = 1;
     let mut best_eval = eval::MIN_EVAL;
     let mut best_move = 0;
@@ -94,7 +125,7 @@ pub fn negamax(
             let (e, n, qn) = if p.is_fifty_move_rule() || p.is_three_fold(history) {
                 (0, 0, 0)
             } else {
-                // Apply LMR - https://www.chessprogramming.org/Late_Move_Reductions
+                // Apply LMR or depth extensions - https://www.chessprogramming.org/Late_Move_Reductions
                 let relative_depth = get_relative_depth(depth, i, in_check);
                 let (new_a, new_b) = if i > 0 { (-alpha-1, -alpha) } else { (-beta, -alpha) };
                 let (e, _, n, qn1) = negamax(p, relative_depth, ply + 1, new_a, new_b, move_stack, history, killers, history_heuristic, tt);

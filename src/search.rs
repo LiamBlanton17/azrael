@@ -41,9 +41,9 @@ impl Position {
 const TIME_SEARCH_EXPECTED_MAX_DEPTH: usize = 32;  // Prepare allocation for up to a depth of 32, will allocate more if needed (very unlikely)
 
 // Main breanch from root_search - if best_move is stable for 4 iterations in a row, or a time budget is exceeded
-// Stable is defined as the same best move and the best eval not moving more than 8 centipawns
+// Stable is defined as the same best move and the best eval not moving more than 5 centipawns
 const STABLE_ITERATION_THRESHOLD: u8 = 4;
-const STABLE_EVAL_THRESHOLD: Eval = 8;
+const STABLE_EVAL_THRESHOLD: Eval = 5;
 fn stable_time_search(p: &mut Position, budget: Duration, tt: &mut TranspositionTable) -> (Eval, Move, u64, u64, usize) {
     let mut move_stack: Vec<Vec<Move>> = (0..=TIME_SEARCH_EXPECTED_MAX_DEPTH).map(|_| Position::new_move_stack()).collect();
     let mut history: Vec<ZobristHash> = Vec::with_capacity(TIME_SEARCH_EXPECTED_MAX_DEPTH);
@@ -90,8 +90,8 @@ fn stable_time_search(p: &mut Position, budget: Duration, tt: &mut Transposition
         };
         last_search_time = last_search_start.elapsed();
 
-        // if stable from last iteration, increment and break if now 3 iterations stable (don't count depths 1-3)
-        if m == best_move && (best_eval - e).abs() <= STABLE_EVAL_THRESHOLD && depth > 3 {
+        // if stable from last iteration, increment and break if now 4 iterations stable (don't count depths 1-4)
+        if m == best_move && (best_eval - e).abs() <= STABLE_EVAL_THRESHOLD && depth > 4 {
             iterations_stable += 1;
             if iterations_stable == STABLE_ITERATION_THRESHOLD {
                 best_eval = e;

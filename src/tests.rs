@@ -1,6 +1,6 @@
-use std::{fs::{self, File}, io::{BufRead, BufReader}, time::{Duration, Instant}};
+use std::{fs::{self, File}, io::{BufRead, BufReader}, sync::atomic::Ordering, time::{Duration, Instant}};
 
-use crate::{search::{RootSearchType, init_engine, move_generation::MoveGenLevel, tt::TranspositionTable}, types::{chess_move::{Move, split_move}, position::{Position, ZobristHash}}};
+use crate::{search::{RootSearchType, init_engine, move_generation::MoveGenLevel, negamax::{RAZOR_ATTEMPTS, RAZOR_CUTOFFS, RAZOR_FAILS}, tt::TranspositionTable}, types::{chess_move::{Move, split_move}, position::{Position, ZobristHash}}};
 
 // Used by the CLI to run a perf test -- this verifies the move generation is working correctly
 // It also provides a best test of raw nodes per second the engine can do, without any other overhead than raw search
@@ -170,7 +170,7 @@ pub fn strength_test() {
     };
 
     // the time limits each position is searched at -- metrics are tracked separately per limit
-    const DEPTH_LIMITS: [usize; 2] = [5, 9];
+    const DEPTH_LIMITS: [usize; 3] = [9, 13, 17];
     const NUM_LIMITS: usize = DEPTH_LIMITS.len();
 
     // one accumulator slot per time limit
@@ -180,6 +180,11 @@ pub fn strength_test() {
     let mut total_search_duration = [Duration::new(0, 0); NUM_LIMITS];
     let mut total_abf = [0.0f64; NUM_LIMITS];
     let mut total_depth = [0usize; NUM_LIMITS];
+
+    // razoring metrics, accumulated per time limit via before/after deltas on the global counters
+    let mut razor_attempts = [0u64; NUM_LIMITS];
+    let mut razor_cutoffs = [0u64; NUM_LIMITS];
+    let mut razor_fails = [0u64; NUM_LIMITS];
 
     // these are per-position, shared across every time limit
     let mut max_score = 0u32;
@@ -208,7 +213,7 @@ pub fn strength_test() {
         };
         println!("\n=== {} ===", path.display());
 
-        let mut tt = TranspositionTable::new(128);
+        let mut tt = TranspositionTable::new(256);
 
         for line in BufReader::new(file).lines() {
             let line = match line {
@@ -239,9 +244,19 @@ pub fn strength_test() {
             // search the position and score the move the engine chose
             for (i, &depth) in DEPTH_LIMITS.iter().enumerate() {
                 tt.clear();  // make sure tt is cleared before each search, but don't include in search time
+
+                // snapshot the global razoring counters so we can attribute this search's razoring to this limit
+                let razor_attempts_before = RAZOR_ATTEMPTS.load(Ordering::Relaxed);
+                let razor_cutoffs_before = RAZOR_CUTOFFS.load(Ordering::Relaxed);
+                let razor_fails_before = RAZOR_FAILS.load(Ordering::Relaxed);
+
                 let start = Instant::now();
                 let (_eval, best_move, nodes, q_nodes, actual_depth) = test.position.root_search(RootSearchType::StableDepthLimited(depth), &mut tt);
                 total_search_duration[i] += start.elapsed();
+
+                razor_attempts[i] += RAZOR_ATTEMPTS.load(Ordering::Relaxed) - razor_attempts_before;
+                razor_cutoffs[i] += RAZOR_CUTOFFS.load(Ordering::Relaxed) - razor_cutoffs_before;
+                razor_fails[i] += RAZOR_FAILS.load(Ordering::Relaxed) - razor_fails_before;
 
                 let scored = test
                     .candidates
@@ -278,6 +293,19 @@ pub fn strength_test() {
         println!("Avg. Depth: {:.2}", (total_depth[i] as f64 / tests_run as f64));
         println!("MN/S: {:.2}", mnps);
         println!("ABF: {:.2}", (total_abf[i] / tests_run as f64));
+
+        // razoring: attempts = drops into quiescence, cutoffs = successful prunes, fails = wasted drops
+        let attempts = razor_attempts[i];
+        let cutoffs = razor_cutoffs[i];
+        let fails = razor_fails[i];
+        let cutoff_rate = if attempts > 0 { cutoffs as f64 / attempts as f64 } else { 0.0 };
+        println!(
+            "Razoring: {} attempts, {} cutoffs, {} fails ({:.1}% cutoff rate)",
+            crate::format_with_commas(attempts),
+            crate::format_with_commas(cutoffs),
+            crate::format_with_commas(fails),
+            cutoff_rate * 100.0,
+        );
     }
 
 }
