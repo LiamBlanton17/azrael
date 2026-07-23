@@ -1,5 +1,5 @@
 use crate::search::move_generation::MoveGenLevel;
-use crate::types::chess_move::{MOVE_FLAG_PROMO, Move, split_move};
+use crate::types::chess_move::{MOVE_FLAG_CASTLE, MOVE_FLAG_ENPASSANT, MOVE_FLAG_PROMO, Move, split_move};
 use crate::types::color::Color;
 use crate::types::piece::Piece;
 use crate::types::position::Position;
@@ -30,7 +30,6 @@ struct SanQuery {
 
 impl Position {
     // Resolve a SAN move string (e.g. "Nf3", "exd5", "O-O", "e8=Q+") to the engine's packed move (i16)
-    // SAN is relative to the actual position, and needs to be checked against moves in the position
     pub fn san_to_move(&mut self, san: &str) -> Result<Move, SanError> {
         let query = parse_san(san, self.turn)?;
 
@@ -58,8 +57,7 @@ impl Position {
                 continue;
             }
 
-            // Promotion: match the exact target piece, or require a non-promotion when SAN
-            // didn't ask for one (so "e8" never matches a promotion move)
+            // Promotion: match the exact target piece
             match query.promo {
                 Some(p) => {
                     if flag != MOVE_FLAG_PROMO || promo_piece != p {
@@ -90,14 +88,144 @@ impl Position {
 
         Err(SanError::NoLegalMove)
     }
+
+    // Render an engine move as its SAN string relative to the current position
+    pub fn move_to_san(&mut self, m: Move) -> String {
+        let (dest, orig, promo_piece, flag) = split_move(m);
+
+        // Castling is spelled out by the king's destination file, not its from/to squares
+        if flag == MOVE_FLAG_CASTLE {
+            let mut san = if dest.to_col() == square::G1.to_col() { "O-O".to_string() } else { "O-O-O".to_string() };
+            san.push_str(self.check_suffix(m));
+            return san;
+        }
+
+        let piece = self.mailbox[orig.idx()];
+
+        // A capture is either an en passant, or a move onto an occupied square
+        let is_capture = flag == MOVE_FLAG_ENPASSANT || self.mailbox[dest.idx()] != Piece::Empty;
+
+        let mut san = String::new();
+
+        if piece == Piece::Pawn {
+            // Pawn captures name the origin file ("exd5"); quiet pushes are just the target ("e4")
+            if is_capture {
+                san.push((b'a' + orig.to_col()) as char);
+                san.push('x');
+            }
+            san.push_str(&dest.to_string());
+            if flag == MOVE_FLAG_PROMO {
+                san.push('=');
+                san.push(san_piece_letter(promo_piece));
+            }
+        } else {
+            san.push(san_piece_letter(piece));
+            san.push_str(&self.disambiguation(m, piece, orig, dest));
+            if is_capture {
+                san.push('x');
+            }
+            san.push_str(&dest.to_string());
+        }
+
+        san.push_str(self.check_suffix(m));
+        san
+    }
+
+    // The minimal origin qualifier ("", "b", "1", or "b1")
+    fn disambiguation(&mut self, m: Move, piece: Piece, orig: Square, dest: Square) -> String {
+        let mut moves = Position::new_move_stack();
+        self.generate_moves(&mut moves, MoveGenLevel::All, false, 0, (0, 0), &[[0; 64]; 64]);
+
+        let mut ambiguous = false;
+        let mut same_file = false;
+        let mut same_rank = false;
+
+        for &other in &moves {
+            if other == m {
+                continue;
+            }
+
+            let (o_dest, o_orig, _, _) = split_move(other);
+            if o_dest != dest || self.mailbox[o_orig.idx()] != piece {
+                continue;
+            }
+
+            // Only legal rivals force disambiguation (a pinned piece can't actually go there)
+            let um = self.make_move(other);
+            let legal = !self.can_kill_king();
+            self.unmake_move(um);
+            if !legal {
+                continue;
+            }
+
+            ambiguous = true;
+            same_file |= o_orig.to_col() == orig.to_col();
+            same_rank |= o_orig.to_row() == orig.to_row();
+        }
+
+        if !ambiguous {
+            return String::new();
+        }
+        if !same_file {
+            return ((b'a' + orig.to_col()) as char).to_string();
+        }
+        if !same_rank {
+            return ((b'1' + orig.to_row()) as char).to_string();
+        }
+        format!("{}{}", (b'a' + orig.to_col()) as char, (b'1' + orig.to_row()) as char)
+    }
+
+    // "+" if the move gives check, "#" if it also mates, "" otherwise
+    fn check_suffix(&mut self, m: Move) -> &'static str {
+        let um = self.make_move(m);
+
+        // After make_move the side to move is the opponent, so `is_square_underattack` on their king
+        // asks whether we (the mover) attack it
+        let opp_king = self.get_friendly_piece(Piece::King).lsb_as_square();
+        let suffix = if self.is_square_underattack(opp_king) {
+            if self.has_legal_move() { "+" } else { "#" }
+        } else {
+            ""
+        };
+
+        self.unmake_move(um);
+        suffix
+    }
+
+    // Does the side to move have at least one legal reply
+    fn has_legal_move(&mut self) -> bool {
+        let mut moves = Position::new_move_stack();
+        self.generate_moves(&mut moves, MoveGenLevel::All, false, 0, (0, 0), &[[0; 64]; 64]);
+        for &m in &moves {
+            let um = self.make_move(m);
+            let legal = !self.can_kill_king();
+            self.unmake_move(um);
+            if legal {
+                return true;
+            }
+        }
+        false
+    }
+}
+
+// The uppercase SAN letter for a piece
+fn san_piece_letter(p: Piece) -> char {
+    match p {
+        Piece::Knight => 'N',
+        Piece::Bishop => 'B',
+        Piece::Rook => 'R',
+        Piece::Queen => 'Q',
+        Piece::King => 'K',
+        _ => '?',
+    }
 }
 
 // Break a SAN string into the constraints needed to identify a move.
 fn parse_san(san: &str, turn: Color) -> Result<SanQuery, SanError> {
-    // Drop the trailing check/checkmate marker, it carries no information for us
+    // Drop the trailing check/checkmate marker
     let s = san.trim().trim_end_matches(['+', '#']);
 
-    // Castling is spelled out; translate it to the concrete king destination for the side to move
+    // Castling is spelled out
     if s == "O-O-O" || s == "0-0-0" {
         let target = if turn == Color::White { square::C1 } else { square::C8 };
         return Ok(SanQuery { piece: Piece::King, target, disambig_file: None, disambig_rank: None, promo: None });
@@ -132,7 +260,7 @@ fn parse_san(san: &str, turn: Color) -> Result<SanQuery, SanError> {
         _ => (Piece::Pawn, main),
     };
 
-    // Capture markers carry no location info; the last two chars are always the target square
+    // Capture markers carry no location info
     let rest = rest.replace('x', "");
     if rest.len() < 2 {
         return Err(SanError::InvalidFormat);

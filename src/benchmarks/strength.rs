@@ -1,86 +1,11 @@
-use std::{fs::{self, File}, io::{BufRead, BufReader}, sync::atomic::Ordering, time::{Duration, Instant}};
+use std::fs::{self, File};
+use std::io::{BufRead, BufReader};
+use std::time::{Duration, Instant};
 
-use crate::{search::{RootSearchType, init_engine, move_generation::MoveGenLevel, negamax::{RAZOR_ATTEMPTS, RAZOR_CUTOFFS, RAZOR_FAILS}, tt::TranspositionTable}, types::{chess_move::{Move, split_move}, position::{Position, ZobristHash}}};
-
-// Used by the CLI to run a perf test -- this verifies the move generation is working correctly
-// It also provides a best test of raw nodes per second the engine can do, without any other overhead than raw search
-pub fn perf_test() {
-
-    // must init the zobrist tables, the rook/bishop magic tables, and the other piece tables
-    init_engine();
-
-    // recursive search for counting visited notes
-    fn count_nodes_visited(p: &mut Position, move_stack: &mut Vec<Vec<Move>>, history: &mut Vec<ZobristHash>, depth: usize) -> u64 {
-        // if at leaf, count this node
-        if depth == 0 {
-            return 1;
-        }
-
-        // generate the new moves for this position
-        // using a 2d stack for moves to avoid any allocation on hot path
-        p.generate_moves(&mut move_stack[depth], MoveGenLevel::All, false, 0, (0, 0), &[[0; 64]; 64]);
-        let num_moves = move_stack[depth].len();
-
-        // add zobrist of the position to history (to avoid 3-folds)
-        // maybe could use a map instead of a list, but list is never very long anyway
-        history.push(p.zobrist);
-
-        // recursive count of nodes
-        let mut nodes = 0;
-        for i in 0..num_moves {
-            let m = move_stack[depth][i];
-            let um = p.make_move(m);
-            if !p.can_kill_king() && !p.is_fifty_move_rule() && !p.is_three_fold(history) {
-                nodes += count_nodes_visited(p, move_stack, history, depth - 1);
-            }
-            p.unmake_move(um);
-        }
-        history.pop();
-
-        nodes
-    }
-
-    // Define tuples for perf_test (name, depth, position, target)
-    // https://www.chessprogramming.org/Perft_Results
-    let tests = [
-        ("Starting Position", 6, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", 119_060_324),
-        ("Kiwipete", 5, "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1", 193_690_690),
-        ("Rook Pawn Endgame", 7, "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1", 178_633_661),
-        ("Chaos", 6, "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1", 706_045_033),
-        ("Engine Killer", 5, "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8", 89_941_194),
-        ("Standard Vibes", 5, "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10", 164_075_551),
-    ];
-
-    let mut passed = true;
-    println!();  // formatting println
-    for (name, depth, fen, target) in tests {
-        let mut p = Position::from_fen(fen).expect("Starting position FEN should not fail to parse");
-        let mut move_stack: Vec<Vec<Move>> = (0..=(depth + 1)).map(|_| Position::new_move_stack()).collect();
-        let mut history: Vec<ZobristHash> = Vec::with_capacity(depth + 1);
-
-        let start = Instant::now();
-        let nodes = count_nodes_visited(&mut p, &mut move_stack, &mut history, depth);
-        let duration = start.elapsed();
-        let mnps = ((nodes as f64) / duration.as_secs_f64()) / 1_000_000.0;
-
-        println!("Position: {}", name);
-        if nodes != target {
-            passed = false;
-            println!("[FAILED] Got Nodes: {}; Expected {}", nodes, target);
-        } else {
-            println!("Nodes: {}", nodes);
-        }
-        println!("Time elapsed: {:?}", duration);
-        println!("MN/S: {:.2}\n", mnps);
-    }
-
-    if passed {
-        println!("\nPassed Perft Test.\n")
-    } else {
-        println!("\nFAILED PERFT TEST!\n")
-    }
-
-}
+use crate::search::{RootSearchType, init_engine};
+use crate::search::tt::TranspositionTable;
+use crate::types::chess_move::{Move, split_move};
+use crate::types::position::Position;
 
 // Bnech mark test structs
 struct BenchmarkTestCandidate {
@@ -170,7 +95,7 @@ pub fn strength_test() {
     };
 
     // the time limits each position is searched at -- metrics are tracked separately per limit
-    const DEPTH_LIMITS: [usize; 3] = [9, 13, 17];
+    const DEPTH_LIMITS: [usize; 3] = [6, 8, 10];
     const NUM_LIMITS: usize = DEPTH_LIMITS.len();
 
     // one accumulator slot per time limit
@@ -180,11 +105,6 @@ pub fn strength_test() {
     let mut total_search_duration = [Duration::new(0, 0); NUM_LIMITS];
     let mut total_abf = [0.0f64; NUM_LIMITS];
     let mut total_depth = [0usize; NUM_LIMITS];
-
-    // razoring metrics, accumulated per time limit via before/after deltas on the global counters
-    let mut razor_attempts = [0u64; NUM_LIMITS];
-    let mut razor_cutoffs = [0u64; NUM_LIMITS];
-    let mut razor_fails = [0u64; NUM_LIMITS];
 
     // these are per-position, shared across every time limit
     let mut max_score = 0u32;
@@ -245,18 +165,10 @@ pub fn strength_test() {
             for (i, &depth) in DEPTH_LIMITS.iter().enumerate() {
                 tt.clear();  // make sure tt is cleared before each search, but don't include in search time
 
-                // snapshot the global razoring counters so we can attribute this search's razoring to this limit
-                let razor_attempts_before = RAZOR_ATTEMPTS.load(Ordering::Relaxed);
-                let razor_cutoffs_before = RAZOR_CUTOFFS.load(Ordering::Relaxed);
-                let razor_fails_before = RAZOR_FAILS.load(Ordering::Relaxed);
 
                 let start = Instant::now();
-                let (_eval, best_move, nodes, q_nodes, actual_depth) = test.position.root_search(RootSearchType::StableDepthLimited(depth), &mut tt);
+                let (_eval, best_move, nodes, q_nodes, actual_depth) = test.position.root_search(RootSearchType::StableDepthLimited(depth), &[], &mut tt);
                 total_search_duration[i] += start.elapsed();
-
-                razor_attempts[i] += RAZOR_ATTEMPTS.load(Ordering::Relaxed) - razor_attempts_before;
-                razor_cutoffs[i] += RAZOR_CUTOFFS.load(Ordering::Relaxed) - razor_cutoffs_before;
-                razor_fails[i] += RAZOR_FAILS.load(Ordering::Relaxed) - razor_fails_before;
 
                 let scored = test
                     .candidates
@@ -293,19 +205,6 @@ pub fn strength_test() {
         println!("Avg. Depth: {:.2}", (total_depth[i] as f64 / tests_run as f64));
         println!("MN/S: {:.2}", mnps);
         println!("ABF: {:.2}", (total_abf[i] / tests_run as f64));
-
-        // razoring: attempts = drops into quiescence, cutoffs = successful prunes, fails = wasted drops
-        let attempts = razor_attempts[i];
-        let cutoffs = razor_cutoffs[i];
-        let fails = razor_fails[i];
-        let cutoff_rate = if attempts > 0 { cutoffs as f64 / attempts as f64 } else { 0.0 };
-        println!(
-            "Razoring: {} attempts, {} cutoffs, {} fails ({:.1}% cutoff rate)",
-            crate::format_with_commas(attempts),
-            crate::format_with_commas(cutoffs),
-            crate::format_with_commas(fails),
-            cutoff_rate * 100.0,
-        );
     }
 
 }

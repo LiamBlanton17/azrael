@@ -3,7 +3,7 @@ mod eval;
 mod interface;
 mod state;
 mod search;
-mod tests;
+mod benchmarks;
 
 use std::time::{Duration, Instant};
 use std::env;
@@ -27,8 +27,9 @@ fn main() {
     let cmd: &str = &args[1];
 
     match cmd {
-        "perft" => tests::perf_test(),
-        "strength" => tests::strength_test(),
+        "uci" => interface::uci_cmd(),
+        "perft" => benchmarks::perft::perf_test(),
+        "strength" => benchmarks::strength::strength_test(),
         "search" => {
             if args_len < 5 {
                 print_help();
@@ -50,7 +51,7 @@ fn main() {
                 Ok(mut p) => {
                     let mut tt = TranspositionTable::new(128);
                     let start = Instant::now();
-                    let (e, m, n, qn, d) = p.root_search(search_type, &mut tt);
+                    let (e, m, n, qn, d) = p.root_search(search_type, &[], &mut tt);
                     let total_nodes = n + qn;
                     let duration = start.elapsed();
                     let (dest, orig, _, _) = split_move(m);
@@ -70,6 +71,7 @@ fn main() {
 
 fn print_help() {
     println!("Must call with one of these arguments:");
+    println!("'uci': run the engine with the uci protocol");
     println!("'perft': run the perft test - do this EVERYTIME movegen is touched");
     println!("'strength': run the strength test - a comprehensive battery of tests to determine if a change improved strength");
     println!("'search [fen] [search_type|'depth','time'] [time_ms|depth_ply]': return the best move and evaluation of the position");

@@ -429,6 +429,17 @@ impl Position {
         can_kill
     }
 
+    // Repetition detection when searching for best move/eval
+    pub fn is_repetition(&self, history: &Vec<ZobristHash>) -> bool {
+        for h in history.iter().rev().skip(1).step_by(2) {
+            if *h == self.zobrist {
+                return true;
+            }
+        }
+        false
+    }
+
+    // Draw guard against three fold rep (used in perft tests)
     pub fn is_three_fold(&self, history: &Vec<ZobristHash>) -> bool {
         let mut count = 0;
         // Most likely to find matches in a reverse history, and only every other (same turn)
@@ -440,7 +451,7 @@ impl Position {
                 }
             }
         }
-        
+
         false
     }
 
@@ -448,7 +459,6 @@ impl Position {
         self.half_moves > 99
     }
 
-    #[allow(dead_code)]
     pub fn print(&self) {
         for row in (0..8).rev() {
             print!("{} ", row + 1);
