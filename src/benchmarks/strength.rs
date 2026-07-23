@@ -95,7 +95,7 @@ pub fn strength_test() {
     };
 
     // the time limits each position is searched at -- metrics are tracked separately per limit
-    const DEPTH_LIMITS: [usize; 3] = [6, 8, 10];
+    const DEPTH_LIMITS: [usize; 6] = [3, 5, 7, 9, 13, 15];
     const NUM_LIMITS: usize = DEPTH_LIMITS.len();
 
     // one accumulator slot per time limit
@@ -167,7 +167,7 @@ pub fn strength_test() {
 
 
                 let start = Instant::now();
-                let (_eval, best_move, nodes, q_nodes, actual_depth) = test.position.root_search(RootSearchType::StableDepthLimited(depth), &[], &mut tt);
+                let (_eval, best_move, nodes, q_nodes, actual_depth) = test.position.root_search(RootSearchType::DepthLimited(depth), &[], &mut tt);
                 total_search_duration[i] += start.elapsed();
 
                 let scored = test

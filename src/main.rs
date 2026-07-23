@@ -19,12 +19,7 @@ fn main() {
 
     let args: Vec<String> = env::args().collect();
     let args_len = args.len();
-    if args_len < 2 {
-        print_help();
-        return;
-    }
-
-    let cmd: &str = &args[1];
+    let cmd = if args_len < 2 { "uci" } else { &args[1] };
 
     match cmd {
         "uci" => interface::uci_cmd(),
