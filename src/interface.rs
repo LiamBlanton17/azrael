@@ -10,9 +10,6 @@ pub fn uci_cmd() {
     init_engine();
     let mut tt = TranspositionTable::new(256);
     let mut position = None;
-    // Zobrist hashes of every position that occurred BEFORE the current one in the
-    // game, oldest first. Seeds the search so repetitions against already-played
-    // moves are detected. Rebuilt on each `position` command.
     let mut game_history: Vec<ZobristHash> = Vec::new();
     let mut current_eval = 0;
 
@@ -66,9 +63,7 @@ pub fn uci_cmd() {
                     Err(_) => continue,
                 }
                 
-                // Play all moves given over the start position, recording the hash of
-                // each position BEFORE the move so the search can see repetitions
-                // against moves that have already been played in the game.
+                // Play all moves given over the start position so the search can see repetitions
                 let mut p = position.expect("Position must be set");
                 let mut new_history: Vec<ZobristHash> = Vec::with_capacity(args.len().saturating_sub(start_of_moves));
                 for long_alg in &args[start_of_moves..] {
