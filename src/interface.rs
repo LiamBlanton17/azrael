@@ -2,6 +2,7 @@ use std::io::{self, Write};
 use std::time::Duration;
 
 use crate::search::{RootSearchType, init_engine, tt::TranspositionTable};
+use crate::types::color::Color;
 use crate::types::position::{Position, ZobristHash};
 
 // https://en.wikipedia.org/wiki/Universal_Chess_Interface
@@ -85,13 +86,36 @@ pub fn uci_cmd() {
                 game_history = new_history;
             },
             "go" => {
+
+                // parse the cmd line args from the go cmd
+                let params = parse_go(&args);
+
+                // if no position defined, just use the starting position
                 let p = position.get_or_insert_with(|| {
                     Position::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1").unwrap()
                 });
+
+                // determine the budget for this round
+                // either dictated from the GUI via movetime
+                // or is some fraction of the remaining time
+                let budget_ms = if let Some(mt) = params.movetime { mt } else {
+                    let (my_time, my_inc) = if p.turn == Color::White {
+                        (params.wtime, params.winc)
+                    } else {
+                        (params.btime, params.binc)
+                    };
+                    match my_time {
+                        // ~5% of the remaining clock + half the increment,
+                        // capped below the clock (50ms lag margin), capped floored at 1ms.
+                        Some(t) => (t / 20 + my_inc / 2).min(t.saturating_sub(50)).max(1),
+                        None => 100, // if no clock info, play really fast (100ms)
+                    }
+                };
+
                 let (e, m, _, _, _) = p.root_search(
-        RootSearchType::TimeLimited(Duration::from_millis(500)),
+        RootSearchType::TimeLimited(Duration::from_millis(budget_ms)),
                     &game_history,
-                    &mut tt
+                    &mut tt,
                 );
                 current_eval = e;
                 println!("bestmove {}", p.move_to_la(m));
@@ -134,3 +158,46 @@ fn read_line_from_stdin() -> io::Result<Vec<String>> {
 
     Ok(args)
 }
+
+#[derive(Default)]
+struct GoParams {
+    wtime: Option<u64>,
+    btime: Option<u64>,
+    winc: u64,
+    binc: u64,
+    movetime: Option<u64>,
+}
+
+fn parse_go(args: &[String]) -> GoParams {
+    let mut g = GoParams::default();
+    let mut i = 1;
+    while i < args.len() {
+        match args[i].as_str() {
+            "wtime" => { 
+                g.wtime = args.get(i + 1).and_then(|s| s.parse().ok());              
+                i += 2; 
+            },
+            "btime" => { 
+                g.btime = args.get(i + 1).and_then(|s| s.parse().ok());              
+                i += 2; 
+            },
+            "winc" => { 
+                g.winc = args.get(i + 1).and_then(|s| s.parse().ok()).unwrap_or(0); 
+                i += 2; 
+            },
+            "binc"     => { 
+                g.binc = args.get(i + 1).and_then(|s| s.parse().ok()).unwrap_or(0); 
+                i += 2; 
+            },
+            "movetime" => { 
+                g.movetime = args.get(i + 1).and_then(|s| s.parse().ok());              
+                i += 2; 
+            },
+            _ => {  // all other cmd line args are ignored for now
+                i += 1; 
+            },
+        }
+    }
+    g
+}
+
