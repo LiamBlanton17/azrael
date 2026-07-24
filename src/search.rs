@@ -17,6 +17,7 @@ use crate::types::position::Position;
 
 use std::time::{Duration, Instant};
 
+#[allow(dead_code)]
 pub enum RootSearchType {
     StableTimeLimited(Duration),
     TimeLimited(Duration),

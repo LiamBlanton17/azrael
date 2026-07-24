@@ -90,6 +90,7 @@ impl Position {
     }
 
     // Render an engine move as its SAN string relative to the current position
+    #[allow(dead_code)]
     pub fn move_to_san(&mut self, m: Move) -> String {
         let (dest, orig, promo_piece, flag) = split_move(m);
 
@@ -132,6 +133,7 @@ impl Position {
     }
 
     // The minimal origin qualifier ("", "b", "1", or "b1")
+    #[allow(dead_code)]
     fn disambiguation(&mut self, m: Move, piece: Piece, orig: Square, dest: Square) -> String {
         let mut moves = Position::new_move_stack();
         self.generate_moves(&mut moves, MoveGenLevel::All, false, 0, (0, 0), &[[0; 64]; 64]);
@@ -176,6 +178,7 @@ impl Position {
     }
 
     // "+" if the move gives check, "#" if it also mates, "" otherwise
+    #[allow(dead_code)]
     fn check_suffix(&mut self, m: Move) -> &'static str {
         let um = self.make_move(m);
 
@@ -193,6 +196,7 @@ impl Position {
     }
 
     // Does the side to move have at least one legal reply
+    #[allow(dead_code)]
     fn has_legal_move(&mut self) -> bool {
         let mut moves = Position::new_move_stack();
         self.generate_moves(&mut moves, MoveGenLevel::All, false, 0, (0, 0), &[[0; 64]; 64]);
@@ -209,6 +213,7 @@ impl Position {
 }
 
 // The uppercase SAN letter for a piece
+#[allow(dead_code)]
 fn san_piece_letter(p: Piece) -> char {
     match p {
         Piece::Knight => 'N',

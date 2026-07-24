@@ -1,6 +1,8 @@
-use std::{io::{self, Read, Write}, time::Duration};
+use std::io::{self, Write};
+use std::time::Duration;
 
-use crate::{search::{RootSearchType, init_engine, tt::TranspositionTable}, types::position::{Position, ZobristHash}};
+use crate::search::{RootSearchType, init_engine, tt::TranspositionTable};
+use crate::types::position::{Position, ZobristHash};
 
 // https://en.wikipedia.org/wiki/Universal_Chess_Interface
 pub fn uci_cmd() {

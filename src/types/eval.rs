@@ -3,7 +3,6 @@ pub type Eval = i16;
 
 // Define infinity scores
 pub const MIN_EVAL: Eval = -32_768;
-pub const MAX_EVAL: Eval = 32_767;
 
 // Defineing a mate threshold
 pub const MATE: Eval = 32000;

@@ -8,6 +8,9 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  # `.cargo/config.toml` builds with `target-cpu=native` for local runs. 
+  # That is unsafe on CI: Override with a portable baseline — x86-64-v2
+  RUSTFLAGS: "-C target-cpu=x86-64-v2"
 
 jobs:
   build-and-perft:

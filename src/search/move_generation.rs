@@ -16,6 +16,7 @@ use crate::types::square::Square;
 pub const MAX_MOVES_IN_POSITION: usize = 256;
 
 // Enum to define level of move generation
+#[allow(dead_code)]
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub enum MoveGenLevel {
     All,
