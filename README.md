@@ -4,12 +4,12 @@ A UCI chess engine written from scratch in Rust — bitboard move generation, an
 
 [![CI](https://github.com/LiamBlanton17/azrael/actions/workflows/ci.yml/badge.svg)](https://github.com/LiamBlanton17/azrael/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Lichess bullet rating](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Flichess.org%2Fapi%2Fuser%2Fazrael17&query=%24.perfs.bullet.rating&label=lichess%20bullet&logo=lichess&logoColor=white&color=5b8ac6)](https://lichess.org/@/azrael17)
+[![Lichess blitz rating](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Flichess.org%2Fapi%2Fuser%2Fazrael17&query=%24.perfs.blitz.rating&label=lichess%20blitz&logo=lichess&logoColor=white&color=5b8ac6)](https://lichess.org/@/azrael17)
+
+**Play it online:** [lichess.org/@/azrael17](https://lichess.org/@/azrael17)
 
 > When I got into programming in 5th grade, I always thought if someone could write a chess engine they must be really smart. Well, now I am a CS graduate and a SWE, I decided it was time for me to make 11 year-old me proud.
-
-## Strength
-- **Estimated rating:** _TODO - Get a Real Benchmark_
-- **Play it online:** [https://lichess.org/@/azrael17](https://lichess.org/@/azrael17)
 
 ## Features
 
