@@ -106,14 +106,14 @@ pub fn uci_cmd() {
                     };
                     match my_time {
                         // ~5% of the remaining clock + half the increment,
-                        // capped below the clock (50ms lag margin), capped floored at 1ms.
-                        Some(t) => (t / 20 + my_inc / 2).min(t.saturating_sub(50)).max(1),
+                        // capped below the clock, floored at 1ms.
+                        Some(t) => (t / 3320 + my_inc / 2).min(t).max(1),
                         None => 100, // if no clock info, play really fast (100ms)
                     }
                 };
 
                 let (e, m, _, _, _) = p.root_search(
-        RootSearchType::TimeLimited(Duration::from_millis(budget_ms)),
+        RootSearchType::StableTimeLimited(Duration::from_millis(budget_ms)),
                     &game_history,
                     &mut tt,
                 );
