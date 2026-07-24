@@ -48,7 +48,7 @@ const TIME_SEARCH_EXPECTED_MAX_DEPTH: usize = 32;  // Prepare allocation for up 
 // Main breanch from root_search - if best_move is stable for 4 iterations in a row, or a time budget is exceeded
 // Stable is defined as the same best move and the best eval not moving more than 5 centipawns
 const STABLE_ITERATION_THRESHOLD: u8 = 3;
-const STABLE_ITERATION_START: usize = 12;
+const STABLE_ITERATION_START: usize = 10;
 const STABLE_EVAL_THRESHOLD: Eval = 5;
 const STABLE_ABF: u32 = 5;
 const DEPTH_TO_START_ASPIRATION_WINDOWS: usize = 5;
@@ -66,10 +66,9 @@ fn stable_time_search(p: &mut Position, budget: Duration, game_history: &[Zobris
 
     // search as long as the estimated branching factor times the last search time is less than the remaining budget
     let mut last_search_time = Duration::new(0, 0);
-    let mut depth = 1;
+    let mut depth = 0;
     let mut iterations_stable = 0;
     while last_search_time * STABLE_ABF < budget {
-        depth += 1;
         // reset the history to the real game history (move gen resets the move stack)
         // so repetitions against already-played moves are detected during search
         history.clear();
@@ -109,12 +108,16 @@ fn stable_time_search(p: &mut Position, budget: Duration, game_history: &[Zobris
                 total_q_nodes += qn;
                 break;
             }
+        } else {
+            iterations_stable = 0;
         }
 
         best_eval = e;
         best_move = m;
         total_nodes += n;
         total_q_nodes += qn;
+        
+        depth += 1;
     }
 
     (best_eval, best_move, total_nodes, total_q_nodes, depth)
@@ -137,7 +140,6 @@ fn time_search(p: &mut Position, budget: Duration, game_history: &[ZobristHash],
     let mut last_search_time = Duration::new(0, 0);
     let mut depth = 0;
     while last_search_time * STABLE_ABF < budget {
-        depth += 1;
 
         // reset the history to the real game history (move gen resets the move stack)
         // so repetitions against already-played moves are detected during search
@@ -171,6 +173,8 @@ fn time_search(p: &mut Position, budget: Duration, game_history: &[ZobristHash],
         best_move = m;
         total_nodes += n;
         total_q_nodes += qn;
+        
+        depth += 1;
     }
 
     (best_eval, best_move, total_nodes, total_q_nodes, depth)
@@ -191,7 +195,7 @@ fn stable_depth_search(p: &mut Position, depth: usize, game_history: &[ZobristHa
     let mut total_nodes = 0;
     let mut total_q_nodes = 0;
     let mut actual_depth_reached = 0;
-    for d in 1..=depth {
+    for d in 0..=depth {
         // reset the history to the real game history (move gen resets the move stack)
         // so repetitions against already-played moves are detected during search
         history.clear();
@@ -231,6 +235,8 @@ fn stable_depth_search(p: &mut Position, depth: usize, game_history: &[ZobristHa
                 total_q_nodes += qn;
                 break;
             }
+        } else {
+            iterations_stable = 0;
         }
         
         best_eval = e;
@@ -255,7 +261,7 @@ fn depth_search(p: &mut Position, depth: usize, game_history: &[ZobristHash], tt
     let mut best_move = 0;
     let mut total_nodes = 0;
     let mut total_q_nodes = 0;
-    for d in 1..=depth {
+    for d in 0..=depth {
         // reset the history to the real game history (move gen resets the move stack)
         // so repetitions against already-played moves are detected during search
         history.clear();
