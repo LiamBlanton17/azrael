@@ -81,7 +81,8 @@ pub fn perf_test() {
     if passed {
         println!("\nPassed Perft Test.\n")
     } else {
-        println!("\nFAILED PERFT TEST!\n")
+        println!("\nFAILED PERFT TEST!\n");
+        std::process::exit(1);
     }
 
 }
