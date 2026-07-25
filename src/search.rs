@@ -43,6 +43,22 @@ impl Position {
 
 }
 
+// Decay the history heuristic between iterations when playing a game
+const HISTORY_DECAY: i16 = 3;
+fn age_history(history_heuristic: &mut [[[i16; 64]; 64]; 2]) {
+    for color in history_heuristic.iter_mut() {
+        for row in color.iter_mut() {
+            for cell in row.iter_mut() {
+                *cell /= HISTORY_DECAY;
+            }
+        }
+    }
+}
+
+fn new_history_heuristic() -> [[[i16; 64]; 64]; 2] {
+    [[[0; 64]; 64]; 2]
+}
+
 const TIME_SEARCH_EXPECTED_MAX_DEPTH: usize = 32;  // Prepare allocation for up to a depth of 32, will allocate more if needed (very unlikely)
 
 // Main breanch from root_search - if best_move is stable for 4 iterations in a row, or a time budget is exceeded
@@ -57,7 +73,7 @@ fn stable_time_search(p: &mut Position, budget: Duration, game_history: &[Zobris
     let mut history: Vec<ZobristHash> = Vec::with_capacity(TIME_SEARCH_EXPECTED_MAX_DEPTH + game_history.len());
     
     let mut killers: Vec<(Move, Move)> = vec![(Move::default(), Move::default()); TIME_SEARCH_EXPECTED_MAX_DEPTH];
-    let mut history_heuristic: [[i16; 64]; 64] = [[0; 64]; 64]; // 64 squares by 64 squares, allowing for a history_heuristic[from][to] lookup
+    let mut history_heuristic= new_history_heuristic();
 
     let mut best_eval = MIN_EVAL;
     let mut best_move = 0;
@@ -73,6 +89,7 @@ fn stable_time_search(p: &mut Position, budget: Duration, game_history: &[Zobris
         // so repetitions against already-played moves are detected during search
         history.clear();
         history.extend_from_slice(game_history);
+        age_history(&mut history_heuristic);
 
         // negamax search to this depth
         let last_search_start = Instant::now();
@@ -129,7 +146,7 @@ fn time_search(p: &mut Position, budget: Duration, game_history: &[ZobristHash],
     let mut history: Vec<ZobristHash> = Vec::with_capacity(TIME_SEARCH_EXPECTED_MAX_DEPTH + game_history.len());
     
     let mut killers: Vec<(Move, Move)> = vec![(Move::default(), Move::default()); TIME_SEARCH_EXPECTED_MAX_DEPTH];
-    let mut history_heuristic: [[i16; 64]; 64] = [[0; 64]; 64]; // 64 squares by 64 squares, allowing for a history_heuristic[from][to] lookup
+    let mut history_heuristic= new_history_heuristic();
 
     let mut best_eval = MIN_EVAL;
     let mut best_move = 0;
@@ -145,6 +162,7 @@ fn time_search(p: &mut Position, budget: Duration, game_history: &[ZobristHash],
         // so repetitions against already-played moves are detected during search
         history.clear();
         history.extend_from_slice(game_history);
+        age_history(&mut history_heuristic);
 
         // negamax search to this depth
         let last_search_start = Instant::now();
@@ -187,7 +205,7 @@ fn stable_depth_search(p: &mut Position, depth: usize, game_history: &[ZobristHa
     let mut history: Vec<ZobristHash> = Vec::with_capacity(depth + 16 + game_history.len());
 
     let mut killers: Vec<(Move, Move)> = vec![(Move::default(), Move::default()); TIME_SEARCH_EXPECTED_MAX_DEPTH];
-    let mut history_heuristic: [[i16; 64]; 64] = [[0; 64]; 64]; // 64 squares by 64 squares, allowing for a history_heuristic[from][to] lookup
+    let mut history_heuristic= new_history_heuristic();
 
     let mut iterations_stable = 0;
     let mut best_eval = MIN_EVAL;
@@ -200,6 +218,7 @@ fn stable_depth_search(p: &mut Position, depth: usize, game_history: &[ZobristHa
         // so repetitions against already-played moves are detected during search
         history.clear();
         history.extend_from_slice(game_history);
+        age_history(&mut history_heuristic);
         actual_depth_reached = d;
 
         // negamax search to this depth
@@ -255,7 +274,7 @@ fn depth_search(p: &mut Position, depth: usize, game_history: &[ZobristHash], tt
     let mut history: Vec<ZobristHash> = Vec::with_capacity(depth + 16 + game_history.len());
 
     let mut killers: Vec<(Move, Move)> = vec![(Move::default(), Move::default()); TIME_SEARCH_EXPECTED_MAX_DEPTH];
-    let mut history_heuristic: [[i16; 64]; 64] = [[0; 64]; 64]; // 64 squares by 64 squares, allowing for a history_heuristic[from][to] lookup
+    let mut history_heuristic = new_history_heuristic();
 
     let mut best_eval = MIN_EVAL;
     let mut best_move = 0;
@@ -266,6 +285,7 @@ fn depth_search(p: &mut Position, depth: usize, game_history: &[ZobristHash], tt
         // so repetitions against already-played moves are detected during search
         history.clear();
         history.extend_from_slice(game_history);
+        age_history(&mut history_heuristic);
 
         // negamax search to this depth
         let (e, m, n, qn) = if d <= DEPTH_TO_START_ASPIRATION_WINDOWS {

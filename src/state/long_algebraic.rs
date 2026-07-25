@@ -33,7 +33,7 @@ impl Position {
 
         // Generate pseudo-legal moves, then filter to legal ones as we scan for a match.
         let mut moves = Position::new_move_stack();
-        self.generate_moves(&mut moves, MoveGenLevel::All, false, 0, (0, 0), &[[0; 64]; 64]);
+        self.generate_moves(&mut moves, MoveGenLevel::All, false, 0, (0, 0), &[[[0; 64]; 64]; 2]);
 
         for &m in &moves {
             // Skip moves that leave our own king in check

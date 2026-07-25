@@ -35,7 +35,7 @@ impl Position {
 
         // Generate pseudo-legal moves, then filter to legal ones as we scan for a match.
         let mut moves = Position::new_move_stack();
-        self.generate_moves(&mut moves, MoveGenLevel::All, false, 0, (0, 0), &[[0; 64]; 64]);
+        self.generate_moves(&mut moves, MoveGenLevel::All, false, 0, (0, 0), &[[[0; 64]; 64]; 2]);
 
         for &m in &moves {
             
@@ -136,7 +136,7 @@ impl Position {
     #[allow(dead_code)]
     fn disambiguation(&mut self, m: Move, piece: Piece, orig: Square, dest: Square) -> String {
         let mut moves = Position::new_move_stack();
-        self.generate_moves(&mut moves, MoveGenLevel::All, false, 0, (0, 0), &[[0; 64]; 64]);
+        self.generate_moves(&mut moves, MoveGenLevel::All, false, 0, (0, 0), &[[[0; 64]; 64]; 2]);
 
         let mut ambiguous = false;
         let mut same_file = false;
@@ -199,7 +199,7 @@ impl Position {
     #[allow(dead_code)]
     fn has_legal_move(&mut self) -> bool {
         let mut moves = Position::new_move_stack();
-        self.generate_moves(&mut moves, MoveGenLevel::All, false, 0, (0, 0), &[[0; 64]; 64]);
+        self.generate_moves(&mut moves, MoveGenLevel::All, false, 0, (0, 0), &[[[0; 64]; 64]; 2]);
         for &m in &moves {
             let um = self.make_move(m);
             let legal = !self.can_kill_king();

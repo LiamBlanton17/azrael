@@ -22,7 +22,7 @@ pub fn perf_test() {
 
         // generate the new moves for this position
         // using a 2d stack for moves to avoid any allocation on hot path
-        p.generate_moves(&mut move_stack[depth], MoveGenLevel::All, false, 0, (0, 0), &[[0; 64]; 64]);
+        p.generate_moves(&mut move_stack[depth], MoveGenLevel::All, false, 0, (0, 0), &[[[0; 64]; 64]; 2]);
         let num_moves = move_stack[depth].len();
 
         // add zobrist of the position to history (to avoid 3-folds)

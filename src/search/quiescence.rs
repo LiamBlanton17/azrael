@@ -10,7 +10,7 @@ pub fn quiescence(
     beta: Eval,
     move_stack: &mut Vec<Vec<Move>>,
     history: &mut Vec<ZobristHash>,
-    history_heuristic: &[[i16; 64]; 64],
+    history_heuristic: &[[[i16; 64]; 64]; 2],
 ) -> (Eval, Move, u64) {
 
     // check if king is in check

@@ -19,7 +19,7 @@ pub fn negamax(
     move_stack: &mut Vec<Vec<Move>>,
     history: &mut Vec<ZobristHash>,
     killers: &mut Vec<(Move, Move)>,
-    history_heuristic: &mut [[i16; 64]; 64],
+    history_heuristic: &mut [[[i16; 64]; 64]; 2],
     tt: &mut TranspositionTable,
 ) -> (Eval, Move, u64, u64) {
 
