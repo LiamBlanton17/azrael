@@ -21,6 +21,7 @@ pub fn negamax(
     killers: &mut Vec<(Move, Move)>,
     history_heuristic: &mut [[[i16; 64]; 64]; 2],
     tt: &mut TranspositionTable,
+    is_nmp_search: bool,
 ) -> (Eval, Move, u64, u64) {
 
     // Draw detection at node entry
@@ -80,12 +81,12 @@ pub fn negamax(
 
     // Null Move Pruning
     // https://www.chessprogramming.org/Null_Move_Pruning
-    if ply > 2 && depth >= 3 {
+    if ply > 2 && depth >= 3 && !is_nmp_search {
         let count_material = (p.color[Color::White.idx()] | p.color[Color::Black.idx()]).0.count_ones(); // Must have at least 12 non-king pieces
         if !in_check && count_material > 14 {
             let r = 2 + (depth / 5); // null-move reduction
             let um = p.make_null_move();
-            let (e, _, n, qn) = negamax(p, depth - 1 - r, ply + 1, -beta, -(beta - 1), move_stack, history, killers, history_heuristic, tt);
+            let (e, _, n, qn) = negamax(p, depth - 1 - r, ply + 1, -beta, -(beta - 1), move_stack, history, killers, history_heuristic, tt, true);
             p.undo_null_move(um);
             let e = -e;
             if e >= beta {
@@ -121,10 +122,10 @@ pub fn negamax(
             // Apply LMR or depth extensions - https://www.chessprogramming.org/Late_Move_Reductions
             let relative_depth = get_relative_depth(depth, i, in_check);
             let (new_a, new_b) = if i > 0 { (-alpha-1, -alpha) } else { (-beta, -alpha) };
-            let (e, _, n, qn1) = negamax(p, relative_depth, ply + 1, new_a, new_b, move_stack, history, killers, history_heuristic, tt);
+            let (e, _, n, qn1) = negamax(p, relative_depth, ply + 1, new_a, new_b, move_stack, history, killers, history_heuristic, tt, false);
             let (e, n, qn) = if i > 0 && -e > alpha && -e < beta {
                 // Re-search at full depth/window
-                let (e, _, n2, qn2) = negamax(p, depth - 1, ply + 1, -beta, -alpha, move_stack, history, killers, history_heuristic, tt);
+                let (e, _, n2, qn2) = negamax(p, depth - 1, ply + 1, -beta, -alpha, move_stack, history, killers, history_heuristic, tt, false);
                 (-e, n + n2, qn1 + qn2)
             } else {
                 (-e, n, qn1)

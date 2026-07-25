@@ -94,7 +94,7 @@ fn stable_time_search(p: &mut Position, budget: Duration, game_history: &[Zobris
         // negamax search to this depth
         let last_search_start = Instant::now();
         let (e, m, n, qn) = if depth <= DEPTH_TO_START_ASPIRATION_WINDOWS {
-            negamax(p, depth, 0, -MATE, MATE, &mut move_stack, &mut history, &mut killers, &mut history_heuristic, tt)
+            negamax(p, depth, 0, -MATE, MATE, &mut move_stack, &mut history, &mut killers, &mut history_heuristic, tt, false)
         } else {
             let mut window: i32 = 25;
             let mut asp_n = 0;
@@ -102,7 +102,7 @@ fn stable_time_search(p: &mut Position, budget: Duration, game_history: &[Zobris
             loop {
                 let alpha = (best_eval as i32 - window).max(-(MATE as i32)) as Eval;
                 let beta  = (best_eval as i32 + window).min(  MATE as i32) as Eval;
-                let (e, m, n, qn) = negamax(p, depth, 0, alpha, beta, &mut move_stack, &mut history, &mut killers, &mut history_heuristic, tt);
+                let (e, m, n, qn) = negamax(p, depth, 0, alpha, beta, &mut move_stack, &mut history, &mut killers, &mut history_heuristic, tt, false);
                 asp_n += n;
                 asp_qn += qn;
                 // re-search only if we failed AND still have room to widen
@@ -167,7 +167,7 @@ fn time_search(p: &mut Position, budget: Duration, game_history: &[ZobristHash],
         // negamax search to this depth
         let last_search_start = Instant::now();
         let (e, m, n, qn) = if depth <= DEPTH_TO_START_ASPIRATION_WINDOWS {
-            negamax(p, depth, 0, -MATE, MATE, &mut move_stack, &mut history, &mut killers, &mut history_heuristic, tt)
+            negamax(p, depth, 0, -MATE, MATE, &mut move_stack, &mut history, &mut killers, &mut history_heuristic, tt, false)
         } else {
             let mut window: i32 = 25;
             let mut asp_n = 0;
@@ -175,7 +175,7 @@ fn time_search(p: &mut Position, budget: Duration, game_history: &[ZobristHash],
             loop {
                 let alpha = (best_eval as i32 - window).max(-(MATE as i32)) as Eval;
                 let beta  = (best_eval as i32 + window).min(  MATE as i32) as Eval;
-                let (e, m, n, qn) = negamax(p, depth, 0, alpha, beta, &mut move_stack, &mut history, &mut killers, &mut history_heuristic, tt);
+                let (e, m, n, qn) = negamax(p, depth, 0, alpha, beta, &mut move_stack, &mut history, &mut killers, &mut history_heuristic, tt, false);
                 asp_n += n;
                 asp_qn += qn;
                 // re-search only if we failed AND still have room to widen
@@ -223,7 +223,7 @@ fn stable_depth_search(p: &mut Position, depth: usize, game_history: &[ZobristHa
 
         // negamax search to this depth
         let (e, m, n, qn) = if d <= DEPTH_TO_START_ASPIRATION_WINDOWS {
-            negamax(p, d, 0, -MATE, MATE, &mut move_stack, &mut history, &mut killers, &mut history_heuristic, tt)
+            negamax(p, d, 0, -MATE, MATE, &mut move_stack, &mut history, &mut killers, &mut history_heuristic, tt, false)
         } else {
             let mut window: i32 = 25;
             let mut asp_n = 0;
@@ -231,7 +231,7 @@ fn stable_depth_search(p: &mut Position, depth: usize, game_history: &[ZobristHa
             loop {
                 let alpha = (best_eval as i32 - window).max(-(MATE as i32)) as Eval;
                 let beta  = (best_eval as i32 + window).min(  MATE as i32) as Eval;
-                let (e, m, n, qn) = negamax(p, depth, 0, alpha, beta, &mut move_stack, &mut history, &mut killers, &mut history_heuristic, tt);
+                let (e, m, n, qn) = negamax(p, depth, 0, alpha, beta, &mut move_stack, &mut history, &mut killers, &mut history_heuristic, tt, false);
                 asp_n += n;
                 asp_qn += qn;
                 // re-search only if we failed AND still have room to widen
@@ -289,7 +289,7 @@ fn depth_search(p: &mut Position, depth: usize, game_history: &[ZobristHash], tt
 
         // negamax search to this depth
         let (e, m, n, qn) = if d <= DEPTH_TO_START_ASPIRATION_WINDOWS {
-            negamax(p, d, 0, -MATE, MATE, &mut move_stack, &mut history, &mut killers, &mut history_heuristic, tt)
+            negamax(p, d, 0, -MATE, MATE, &mut move_stack, &mut history, &mut killers, &mut history_heuristic, tt, false)
         } else {
             let mut window: i32 = 25;
             let mut asp_n = 0;
@@ -297,7 +297,7 @@ fn depth_search(p: &mut Position, depth: usize, game_history: &[ZobristHash], tt
             loop {
                 let alpha = (best_eval as i32 - window).max(-(MATE as i32)) as Eval;
                 let beta  = (best_eval as i32 + window).min(  MATE as i32) as Eval;
-                let (e, m, n, qn) = negamax(p, depth, 0, alpha, beta, &mut move_stack, &mut history, &mut killers, &mut history_heuristic, tt);
+                let (e, m, n, qn) = negamax(p, depth, 0, alpha, beta, &mut move_stack, &mut history, &mut killers, &mut history_heuristic, tt, false);
                 asp_n += n;
                 asp_qn += qn;
                 // re-search only if we failed AND still have room to widen
