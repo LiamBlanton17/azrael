@@ -23,12 +23,22 @@ pub fn negamax(
     tt: &mut TranspositionTable,
 ) -> (Eval, Move, u64, u64) {
 
-    // Probe the transposition table 
+    // Draw detection at node entry
+    if ply > 0 && (p.is_fifty_move_rule() || p.is_repetition(history)) {
+        return (0, 0, 1, 0);
+    }
+
+    // Determine if this node is a PV node
+    // https://www.chessprogramming.org/Node_Types
+    let is_pv = (beta as i32) - (alpha as i32) > 1;
+
+    // Probe the transposition table
     let alpha_orig = alpha;
     let mut tt_move = 0;
     if let Some(e) = tt.probe(p.zobrist) {
         tt_move = e.best_move;
-        if ply > 0 && e.depth as usize >= depth {
+        // Only take a TT cutoff at non-PV nodes
+        if ply > 0 && !is_pv && e.depth as usize >= depth {
             let tt_score = score_from_tt(e.score, ply);
             let cutoff = match e.bound {
                 Bound::Exact => true,
@@ -108,19 +118,16 @@ pub fn negamax(
         let is_legal_move = !p.can_kill_king();
         if is_legal_move {
             found_legal_move = true;
-            let (e, n, qn) = if p.is_fifty_move_rule() || p.is_repetition(history) {
-                (0, 0, 0)
+            // Apply LMR or depth extensions - https://www.chessprogramming.org/Late_Move_Reductions
+            let relative_depth = get_relative_depth(depth, i, in_check);
+            let (new_a, new_b) = if i > 0 { (-alpha-1, -alpha) } else { (-beta, -alpha) };
+            let (e, _, n, qn1) = negamax(p, relative_depth, ply + 1, new_a, new_b, move_stack, history, killers, history_heuristic, tt);
+            let (e, n, qn) = if i > 0 && -e > alpha && -e < beta {
+                // Re-search at full depth/window
+                let (e, _, n2, qn2) = negamax(p, depth - 1, ply + 1, -beta, -alpha, move_stack, history, killers, history_heuristic, tt);
+                (-e, n + n2, qn1 + qn2)
             } else {
-                // Apply LMR or depth extensions - https://www.chessprogramming.org/Late_Move_Reductions
-                let relative_depth = get_relative_depth(depth, i, in_check);
-                let (new_a, new_b) = if i > 0 { (-alpha-1, -alpha) } else { (-beta, -alpha) };
-                let (e, _, n, qn1) = negamax(p, relative_depth, ply + 1, new_a, new_b, move_stack, history, killers, history_heuristic, tt);
-                if i > 0 && -e > alpha && -e < beta {
-                    let (e, _, n, qn2) = negamax(p, depth - 1, ply + 1, -beta, -alpha, move_stack, history, killers, history_heuristic, tt);
-                    (-e, n, qn1 + qn2)
-                } else {
-                    (-e, n, qn1)
-                }
+                (-e, n, qn1)
             };
             nodes += n;
             q_nodes += qn;
@@ -134,31 +141,37 @@ pub fn negamax(
         }
         p.unmake_move(um);
 
-        // alpha-beta cutoff
-        if alpha >= beta {
+        // Only legal moves may drive cutoffs, killers and history
+        if is_legal_move {
+            // alpha-beta cutoff
+            if alpha >= beta {
 
-            // If is not a capture, add to history_heuristic
-            // If not a killer, add to killers
-            if !is_capture_move {
-                let (dest, origin, _, _) = split_move(m);
-                history_heuristic[origin.idx()][dest.idx()] = min(
-                    history_heuristic[origin.idx()][dest.idx()] + (depth * depth) as i16,
-                    KILLER_SCORE
-                );
-                if m != killers[ply].0 {
-                    killers[ply].1 = killers[ply].0;
-                    killers[ply].0 = m;
+                // If is not a capture, add to history_heuristic (indexed by the side to move so the
+                // two colors don't share one table and overwrite each other's ordering scores).
+                // If not a killer, add to killers
+                if !is_capture_move {
+                    let (dest, origin, _, _) = split_move(m);
+                    let c = p.turn.idx();
+                    history_heuristic[c][origin.idx()][dest.idx()] = min(
+                        history_heuristic[c][origin.idx()][dest.idx()] + (depth * depth) as i16,
+                        KILLER_SCORE
+                    );
+                    if m != killers[ply].0 {
+                        killers[ply].1 = killers[ply].0;
+                        killers[ply].0 = m;
+                    }
                 }
-            }
-            break;
-        } else {
-            // decrement history if it didn't cause a cutoff
-            if !is_capture_move {
-                let (dest, origin, _, _) = split_move(m);
-                history_heuristic[origin.idx()][dest.idx()] = max(
-                    history_heuristic[origin.idx()][dest.idx()] - (depth * depth) as i16,
-                    0
-                );
+                break;
+            } else {
+                // decrement history if it didn't cause a cutoff
+                if !is_capture_move {
+                    let (dest, origin, _, _) = split_move(m);
+                    let c = p.turn.idx();
+                    history_heuristic[c][origin.idx()][dest.idx()] = max(
+                        history_heuristic[c][origin.idx()][dest.idx()] - (depth * depth) as i16,
+                        0
+                    );
+                }
             }
         }
     }
