@@ -31,7 +31,7 @@ pub fn negamax(
 
     // Determine if this node is a PV node
     // https://www.chessprogramming.org/Node_Types
-    let is_pv = (beta as i32) - (alpha as i32) > 1;
+    let is_pv = beta - alpha > 1;
 
     // Probe the transposition table
     let alpha_orig = alpha;
