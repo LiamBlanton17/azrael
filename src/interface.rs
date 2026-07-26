@@ -105,9 +105,9 @@ pub fn uci_cmd() {
                         (params.btime, params.binc)
                     };
                     match my_time {
-                        // ~5% of the remaining clock + half the increment,
+                        // ~4% of the remaining clock + half the increment,
                         // capped below the clock, floored at 1ms.
-                        Some(t) => (t / 3320 + my_inc / 2).min(t).max(1),
+                        Some(t) => (t / 25 + my_inc / 2).min(t).max(1),
                         None => 100, // if no clock info, play really fast (100ms)
                     }
                 };
