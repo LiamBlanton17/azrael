@@ -1,4 +1,6 @@
 use crate::eval::PAWN;
+use crate::search::tt::{Bound, TranspositionTable};
+use crate::types::eval::{score_from_tt, score_to_tt};
 use crate::{search::move_generation::{MoveGenLevel, ensure_move_stack_len}, types::{chess_move::{MOVE_FLAG_ENPASSANT, MOVE_FLAG_PROMO, Move, split_move}, eval::{Eval, MATE}, position::{Position, ZobristHash}}};
 
 // quiescence search is basically just negamax but only looking at captures
@@ -11,6 +13,7 @@ pub fn quiescence(
     move_stack: &mut Vec<Vec<Move>>,
     history: &mut Vec<ZobristHash>,
     history_heuristic: &[[[i16; 64]; 64]; 2],
+    tt: &mut TranspositionTable,
 ) -> (Eval, Move, u64) {
 
     // check if king is in check
@@ -35,9 +38,25 @@ pub fn quiescence(
         best_eval = -MATE;
     }
 
+    // Probe the transposition table
+    let mut tt_move = 0;
+    if let Some(e) = tt.probe(p.zobrist) {
+        tt_move = e.best_move;
+        let tt_score = score_from_tt(e.score, ply);
+        let cutoff = match e.bound {
+            Bound::Exact => true,
+            Bound::Lower => tt_score >= beta,
+            Bound::Upper => tt_score <= alpha,
+        };
+        if cutoff {
+            return (tt_score, tt_move, 1);
+        }
+    }
+    let alpha_orig = alpha;
+
     // generate captures only, or all moves if king in check (evasion moves)
     ensure_move_stack_len(move_stack, ply);
-    p.generate_moves(&mut move_stack[ply], if in_check {MoveGenLevel::All} else {MoveGenLevel::Captures}, true, 0, (0, 0), history_heuristic);
+    p.generate_moves(&mut move_stack[ply], if in_check {MoveGenLevel::All} else {MoveGenLevel::Captures}, true, tt_move, (0, 0), history_heuristic);
     let num_moves = move_stack[ply].len();
 
     let mut nodes = 1;
@@ -71,7 +90,7 @@ pub fn quiescence(
         if is_legal_move {
             has_legal_move = true;
 
-            let (e, _, n) = quiescence(p, ply + 1, -beta, -alpha, move_stack, history, history_heuristic);
+            let (e, _, n) = quiescence(p, ply + 1, -beta, -alpha, move_stack, history, history_heuristic, tt);
             let e = -e;
             nodes += n;
 
@@ -92,8 +111,20 @@ pub fn quiescence(
 
     // In check with no legal moves = checkmate
     if in_check && !has_legal_move {
-        return (-MATE + ply as Eval, 0, nodes); 
+        let mate = -MATE + ply as Eval;
+        tt.store(p.zobrist, 0, score_to_tt(mate, ply), 0, Bound::Exact);
+        return (mate, 0, nodes);
     }
+
+    // Store the result in the TT - Quiescence is a depth-0 node, so entries don't remove Negamax entries
+    let bound = if best_eval <= alpha_orig {
+        Bound::Upper
+    } else if best_eval >= beta {
+        Bound::Lower
+    } else {
+        Bound::Exact
+    };
+    tt.store(p.zobrist, best_move, score_to_tt(best_eval, ply), 0, bound);
 
     (best_eval, best_move, nodes)
 }

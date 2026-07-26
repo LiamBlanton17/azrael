@@ -54,7 +54,7 @@ pub fn negamax(
 
     // if at depth, run the quiescence search
     if depth == 0 {
-        let (e, m, q_nodes) = quiescence(p, ply, alpha, beta, move_stack, history, history_heuristic);
+        let (e, m, q_nodes) = quiescence(p, ply, alpha, beta, move_stack, history, history_heuristic, tt);
         return (e, m, 0, q_nodes);
     }
 
@@ -71,7 +71,7 @@ pub fn negamax(
     if depth <= RAZOR_DEPTH && !in_check {
         stand_pat = p.eval_relative();
         if stand_pat + RAZOR_MARGIN * (depth as Eval) < alpha {
-            let (e, m, q_nodes) = quiescence(p, ply, alpha, beta, move_stack, history, history_heuristic);
+            let (e, m, q_nodes) = quiescence(p, ply, alpha, beta, move_stack, history, history_heuristic, tt);
             if e < alpha {
                 return (e, m, 0, q_nodes);
             }
