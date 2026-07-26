@@ -8,7 +8,7 @@ pub mod tt;
 use crate::search::magics::bishop::init_bishop_magic;
 use crate::search::magics::rook::init_rook_magic;
 use crate::search::move_generation::{init_king_moves, init_knight_moves};
-use crate::search::negamax::negamax;
+use crate::search::negamax::{NegamaxSearchParams, NegamaxSearcher};
 use crate::search::tt::TranspositionTable;
 use crate::state::zobrist::init_zobrist;
 use crate::types::{chess_move::Move, position::ZobristHash};
@@ -91,10 +91,26 @@ fn stable_time_search(p: &mut Position, budget: Duration, game_history: &[Zobris
         history.extend_from_slice(game_history);
         age_history(&mut history_heuristic);
 
+        // setup the searcher
+        let mut searcher = NegamaxSearcher {
+            move_stack: &mut move_stack,
+            history: &mut history,
+            killers: &mut killers,
+            history_heuristic: &mut history_heuristic,
+            tt,
+        };
+
         // negamax search to this depth
         let last_search_start = Instant::now();
         let (e, m, n, qn) = if depth <= DEPTH_TO_START_ASPIRATION_WINDOWS {
-            negamax(p, depth, 0, -MATE, MATE, &mut move_stack, &mut history, &mut killers, &mut history_heuristic, tt, false)
+            let result = searcher.search(p, NegamaxSearchParams {
+                depth,
+                ply: 0,
+                alpha: -MATE,
+                beta: MATE,
+                is_nmp_search: false,
+            });
+            (result.eval, result.best_move, result.nodes, result.q_nodes)
         } else {
             let mut window: i32 = 25;
             let mut asp_n = 0;
@@ -102,15 +118,22 @@ fn stable_time_search(p: &mut Position, budget: Duration, game_history: &[Zobris
             loop {
                 let alpha = (best_eval as i32 - window).max(-(MATE as i32)) as Eval;
                 let beta  = (best_eval as i32 + window).min(  MATE as i32) as Eval;
-                let (e, m, n, qn) = negamax(p, depth, 0, alpha, beta, &mut move_stack, &mut history, &mut killers, &mut history_heuristic, tt, false);
-                asp_n += n;
-                asp_qn += qn;
+                let result = searcher.search(p, NegamaxSearchParams {
+                    depth,
+                    ply: 0,
+                    alpha,
+                    beta,
+                    is_nmp_search: false,
+                });
+                asp_n += result.nodes;
+                asp_qn += result.q_nodes;
+                let e = result.eval;
                 // re-search only if we failed AND still have room to widen
                 if (e <= alpha && alpha > -(MATE)) || (e >= beta && beta < MATE) {
                     window *= 4;
                     continue;
                 }
-                break (e, m, asp_n, asp_qn);
+                break (e, result.best_move, asp_n, asp_qn);
             }
         };
         last_search_time = last_search_start.elapsed();
@@ -164,10 +187,26 @@ fn time_search(p: &mut Position, budget: Duration, game_history: &[ZobristHash],
         history.extend_from_slice(game_history);
         age_history(&mut history_heuristic);
 
+        // setup the searcher
+        let mut searcher = NegamaxSearcher {
+            move_stack: &mut move_stack, 
+            history: &mut history, 
+            killers: &mut killers, 
+            history_heuristic: &mut history_heuristic, 
+            tt,
+        };
+
         // negamax search to this depth
         let last_search_start = Instant::now();
         let (e, m, n, qn) = if depth <= DEPTH_TO_START_ASPIRATION_WINDOWS {
-            negamax(p, depth, 0, -MATE, MATE, &mut move_stack, &mut history, &mut killers, &mut history_heuristic, tt, false)
+            let result = searcher.search(p, NegamaxSearchParams {
+                depth, 
+                ply: 0,
+                alpha: -MATE,
+                beta: MATE,
+                is_nmp_search: false,
+            });
+            (result.eval, result.best_move, result.nodes, result.q_nodes)
         } else {
             let mut window: i32 = 25;
             let mut asp_n = 0;
@@ -175,15 +214,22 @@ fn time_search(p: &mut Position, budget: Duration, game_history: &[ZobristHash],
             loop {
                 let alpha = (best_eval as i32 - window).max(-(MATE as i32)) as Eval;
                 let beta  = (best_eval as i32 + window).min(  MATE as i32) as Eval;
-                let (e, m, n, qn) = negamax(p, depth, 0, alpha, beta, &mut move_stack, &mut history, &mut killers, &mut history_heuristic, tt, false);
-                asp_n += n;
-                asp_qn += qn;
+                let result = searcher.search(p, NegamaxSearchParams {
+                    depth, 
+                    ply: 0,
+                    alpha,
+                    beta,
+                    is_nmp_search: false,
+                });
+                asp_n += result.nodes;
+                asp_qn += result.q_nodes;
+                let e = result.eval;
                 // re-search only if we failed AND still have room to widen
                 if (e <= alpha && alpha > -(MATE)) || (e >= beta && beta < MATE) {
                     window *= 4;
                     continue;
                 }
-                break (e, m, asp_n, asp_qn);
+                break (e, result.best_move, asp_n, asp_qn);
             }
         };
         last_search_time = last_search_start.elapsed();
@@ -221,9 +267,25 @@ fn stable_depth_search(p: &mut Position, depth: usize, game_history: &[ZobristHa
         age_history(&mut history_heuristic);
         actual_depth_reached = d;
 
+        // setup the searcher
+        let mut searcher = NegamaxSearcher {
+            move_stack: &mut move_stack,
+            history: &mut history,
+            killers: &mut killers,
+            history_heuristic: &mut history_heuristic,
+            tt,
+        };
+
         // negamax search to this depth
         let (e, m, n, qn) = if d <= DEPTH_TO_START_ASPIRATION_WINDOWS {
-            negamax(p, d, 0, -MATE, MATE, &mut move_stack, &mut history, &mut killers, &mut history_heuristic, tt, false)
+            let result = searcher.search(p, NegamaxSearchParams {
+                depth: d,
+                ply: 0,
+                alpha: -MATE,
+                beta: MATE,
+                is_nmp_search: false,
+            });
+            (result.eval, result.best_move, result.nodes, result.q_nodes)
         } else {
             let mut window: i32 = 25;
             let mut asp_n = 0;
@@ -231,19 +293,26 @@ fn stable_depth_search(p: &mut Position, depth: usize, game_history: &[ZobristHa
             loop {
                 let alpha = (best_eval as i32 - window).max(-(MATE as i32)) as Eval;
                 let beta  = (best_eval as i32 + window).min(  MATE as i32) as Eval;
-                let (e, m, n, qn) = negamax(p, d, 0, alpha, beta, &mut move_stack, &mut history, &mut killers, &mut history_heuristic, tt, false);
-                asp_n += n;
-                asp_qn += qn;
+                let result = searcher.search(p, NegamaxSearchParams {
+                    depth: d,
+                    ply: 0,
+                    alpha,
+                    beta,
+                    is_nmp_search: false,
+                });
+                asp_n += result.nodes;
+                asp_qn += result.q_nodes;
+                let e = result.eval;
                 // re-search only if we failed AND still have room to widen
                 if (e <= alpha && alpha > -(MATE)) || (e >= beta && beta < MATE) {
                     window *= 4;
                     continue;
                 }
-                break (e, m, asp_n, asp_qn);
+                break (e, result.best_move, asp_n, asp_qn);
             }
         };
 
-        
+
         // if stable from last iteration, increment and break if now 3 iterations stable (don't count depths 1-3)
         if m == best_move && (best_eval - e).abs() <= STABLE_EVAL_THRESHOLD && depth > STABLE_ITERATION_START {
             iterations_stable += 1;
@@ -287,9 +356,25 @@ fn depth_search(p: &mut Position, depth: usize, game_history: &[ZobristHash], tt
         history.extend_from_slice(game_history);
         age_history(&mut history_heuristic);
 
+        // setup the searcher
+        let mut searcher = NegamaxSearcher {
+            move_stack: &mut move_stack,
+            history: &mut history,
+            killers: &mut killers,
+            history_heuristic: &mut history_heuristic,
+            tt,
+        };
+
         // negamax search to this depth
         let (e, m, n, qn) = if d <= DEPTH_TO_START_ASPIRATION_WINDOWS {
-            negamax(p, d, 0, -MATE, MATE, &mut move_stack, &mut history, &mut killers, &mut history_heuristic, tt, false)
+            let result = searcher.search(p, NegamaxSearchParams {
+                depth: d,
+                ply: 0,
+                alpha: -MATE,
+                beta: MATE,
+                is_nmp_search: false,
+            });
+            (result.eval, result.best_move, result.nodes, result.q_nodes)
         } else {
             let mut window: i32 = 25;
             let mut asp_n = 0;
@@ -297,15 +382,22 @@ fn depth_search(p: &mut Position, depth: usize, game_history: &[ZobristHash], tt
             loop {
                 let alpha = (best_eval as i32 - window).max(-(MATE as i32)) as Eval;
                 let beta  = (best_eval as i32 + window).min(  MATE as i32) as Eval;
-                let (e, m, n, qn) = negamax(p, d, 0, alpha, beta, &mut move_stack, &mut history, &mut killers, &mut history_heuristic, tt, false);
-                asp_n += n;
-                asp_qn += qn;
+                let result = searcher.search(p, NegamaxSearchParams {
+                    depth: d,
+                    ply: 0,
+                    alpha,
+                    beta,
+                    is_nmp_search: false,
+                });
+                asp_n += result.nodes;
+                asp_qn += result.q_nodes;
+                let e = result.eval;
                 // re-search only if we failed AND still have room to widen
                 if (e <= alpha && alpha > -(MATE)) || (e >= beta && beta < MATE) {
                     window *= 4;
                     continue;
                 }
-                break (e, m, asp_n, asp_qn);
+                break (e, result.best_move, asp_n, asp_qn);
             }
         };
 
