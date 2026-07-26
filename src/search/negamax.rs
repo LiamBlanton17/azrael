@@ -216,5 +216,6 @@ fn get_relative_depth(depth: usize, move_index: usize, in_check: bool) -> usize 
     let d = (depth as f64).ln();
     let i = (move_index as f64).ln();
     let r = 0.99 + d * i / 3.14;
-    (r.round() as usize).min(depth - 1)
+    let reduction = r.round() as usize;
+    (depth - 1).saturating_sub(reduction).max(1)
 }
