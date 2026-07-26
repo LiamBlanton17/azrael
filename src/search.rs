@@ -63,9 +63,9 @@ const TIME_SEARCH_EXPECTED_MAX_DEPTH: usize = 32;  // Prepare allocation for up 
 
 // Main breanch from root_search - if best_move is stable for 4 iterations in a row, or a time budget is exceeded
 // Stable is defined as the same best move and the best eval not moving more than 5 centipawns
-const STABLE_ITERATION_THRESHOLD: u8 = 3;
-const STABLE_ITERATION_START: usize = 10;
-const STABLE_EVAL_THRESHOLD: Eval = 5;
+const STABLE_ITERATION_THRESHOLD: u8 = 5;
+const STABLE_ITERATION_START: usize = 12;
+const STABLE_EVAL_THRESHOLD: Eval = 10;
 const STABLE_ABF: u32 = 5;
 const DEPTH_TO_START_ASPIRATION_WINDOWS: usize = 5;
 fn stable_time_search(p: &mut Position, budget: Duration, game_history: &[ZobristHash], tt: &mut TranspositionTable) -> (Eval, Move, u64, u64, usize) {
