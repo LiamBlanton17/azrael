@@ -84,6 +84,7 @@ fn stable_time_search(p: &mut Position, budget: Duration, game_history: &[Zobris
     let mut last_search_time = Duration::new(0, 0);
     let mut depth = 0;
     let mut iterations_stable = 0;
+    let deadline = Some(Instant::now() + budget);
     while last_search_time * STABLE_ABF < budget {
         // reset the history to the real game history (move gen resets the move stack)
         // so repetitions against already-played moves are detected during search
@@ -100,6 +101,8 @@ fn stable_time_search(p: &mut Position, budget: Duration, game_history: &[Zobris
             tt,
             nodes: 0,
             q_nodes: 0,
+            aborted: false,
+            deadline,
         };
 
         // negamax search to this depth
@@ -136,14 +139,21 @@ fn stable_time_search(p: &mut Position, budget: Duration, game_history: &[Zobris
         };
         last_search_time = last_search_start.elapsed();
 
+        // update nodes searched
+        total_nodes += n;
+        total_q_nodes += qn;
+
+        // if the search was aborted, keep the old eval/best move
+        if searcher.aborted {
+            break;
+        }
+
         // if stable from last iteration, increment and break if now 4 iterations stable (don't count depths 1-4)
         if m == best_move && (best_eval - e).abs() <= STABLE_EVAL_THRESHOLD && depth > STABLE_ITERATION_START {
             iterations_stable += 1;
             if iterations_stable == STABLE_ITERATION_THRESHOLD {
                 best_eval = e;
                 best_move = m;
-                total_nodes += n;
-                total_q_nodes += qn;
                 break;
             }
         } else {
@@ -152,8 +162,6 @@ fn stable_time_search(p: &mut Position, budget: Duration, game_history: &[Zobris
 
         best_eval = e;
         best_move = m;
-        total_nodes += n;
-        total_q_nodes += qn;
         
         depth += 1;
     }
@@ -177,6 +185,7 @@ fn time_search(p: &mut Position, budget: Duration, game_history: &[ZobristHash],
     // search as long as the estimated branching factor times the last search time is less than the remaining budget
     let mut last_search_time = Duration::new(0, 0);
     let mut depth = 0;
+    let deadline = Some(Instant::now() + budget);
     while last_search_time * STABLE_ABF < budget {
 
         // reset the history to the real game history (move gen resets the move stack)
@@ -194,6 +203,8 @@ fn time_search(p: &mut Position, budget: Duration, game_history: &[ZobristHash],
             tt,
             nodes: 0,
             q_nodes: 0,
+            aborted: false,
+            deadline,
         };
 
         // negamax search to this depth
@@ -229,10 +240,18 @@ fn time_search(p: &mut Position, budget: Duration, game_history: &[ZobristHash],
             }
         };
         last_search_time = last_search_start.elapsed();
-        best_eval = e;
-        best_move = m;
+
+        // update nodes searched
         total_nodes += n;
         total_q_nodes += qn;
+
+        // if the search was aborted, keep the old eval/best move
+        if searcher.aborted {
+            break;
+        }
+
+        best_eval = e;
+        best_move = m;
         
         depth += 1;
     }
@@ -272,6 +291,9 @@ fn stable_depth_search(p: &mut Position, depth: usize, game_history: &[ZobristHa
             tt,
             nodes: 0,
             q_nodes: 0,
+            aborted: false,
+            deadline: None,
+
         };
 
         // negamax search to this depth
@@ -359,6 +381,8 @@ fn depth_search(p: &mut Position, depth: usize, game_history: &[ZobristHash], tt
             tt,
             nodes: 0,
             q_nodes: 0,
+            aborted: false,
+            deadline: None,
         };
 
         // negamax search to this depth

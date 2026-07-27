@@ -1,4 +1,5 @@
 use std::cmp::{max, min};
+use std::time::{Duration, Instant};
 
 use crate::search::move_generation::{ensure_move_stack_len, MoveGenLevel};
 use crate::search::move_ordering::KILLER_SCORE;
@@ -18,6 +19,8 @@ pub struct NegamaxSearcher<'a> {
     pub tt: &'a mut TranspositionTable,
     pub nodes: u64,
     pub q_nodes: u64,
+    pub deadline: Option<Instant>,
+    pub aborted: bool,
 }
 
 #[derive(Clone, Copy)]
@@ -33,13 +36,22 @@ pub struct NegamaxSearchResult {
     pub eval: Eval,
     pub best_move: Move,
     pub is_three_fold: bool,
-    pub is_aborted: bool,
 }
 
 impl NegamaxSearcher<'_> {
 
     // Return eval, move, negamax nodes, quiescence nodes
     pub fn search(&mut self, p: &mut Position, params: NegamaxSearchParams) -> NegamaxSearchResult {
+
+        // check if we need to abort this search
+        if self.nodes & 32767 == 0 {
+            if let Some(d) = self.deadline {
+                if Instant::now() >= d { self.aborted = true; }
+            }
+        }
+        if self.aborted {
+            return NegamaxSearchResult { eval: 0, best_move: 0, is_three_fold: false };
+        }
 
         // increase node count by 1 at top of each node
         self.nodes += 1;
@@ -57,7 +69,6 @@ impl NegamaxSearcher<'_> {
                 eval: 0,
                 best_move: 0,
                 is_three_fold: true,
-                is_aborted: false,
             };
         }
 
@@ -83,7 +94,6 @@ impl NegamaxSearcher<'_> {
                         eval: tt_score,
                         best_move: tt_move,
                         is_three_fold: false,
-                        is_aborted: false,
                     };
                 }
             }
@@ -97,7 +107,6 @@ impl NegamaxSearcher<'_> {
                 eval: e,
                 best_move: m,
                 is_three_fold: false,
-                is_aborted: false,
             };
         }
 
@@ -120,7 +129,6 @@ impl NegamaxSearcher<'_> {
                         eval: e,
                         best_move: m,
                         is_three_fold: false,
-                        is_aborted: false,
                     };
                 }
             }
@@ -147,7 +155,6 @@ impl NegamaxSearcher<'_> {
                         eval: beta,
                         best_move: 0,
                         is_three_fold: false,
-                        is_aborted: false,
                     };
                 }
             }
@@ -257,11 +264,17 @@ impl NegamaxSearcher<'_> {
         }
         self.history.pop();
 
+
+        // if one of the child nodes aborted -- abort this node too
+        if self.aborted {
+            return NegamaxSearchResult { eval: 0, best_move: 0, is_three_fold: false };
+        }
+
         if !found_legal_move {
             if in_check {
-                NegamaxSearchResult { eval: -MATE + ply as i16, best_move: 0, is_three_fold: false, is_aborted: false, }
+                NegamaxSearchResult { eval: -MATE + ply as i16, best_move: 0, is_three_fold: false }
             } else {
-                NegamaxSearchResult { eval: 0, best_move: 0, is_three_fold: false, is_aborted: false, }
+                NegamaxSearchResult { eval: 0, best_move: 0, is_three_fold: false }
             }
         } else {
             // Store the result in the TT as well as return it
@@ -273,7 +286,7 @@ impl NegamaxSearcher<'_> {
                 Bound::Exact
             };
             self.tt.store(p.zobrist, best_move, score_to_tt(best_eval, ply), depth as u8, bound);
-            NegamaxSearchResult { eval: best_eval, best_move: best_move, is_three_fold: false, is_aborted: false, }
+            NegamaxSearchResult { eval: best_eval, best_move: best_move, is_three_fold: false }
         }
 
     }
