@@ -311,43 +311,51 @@ fn pawn_structure_eval(p: &Position, phase: i32) -> Eval {
     let black_pawns = p.get_piece(Piece::Pawn, Color::Black);
 
     // Doubled pawns - penalty that increases in the endgame
-    let doubled_penalty = interpolate_phase(phase, 14, 36);
+    let doubled_penalty = interpolate_phase(phase, 13, 35);
     eval -= doubled_pawns(white_pawns) as Eval * doubled_penalty;
     eval += doubled_pawns(black_pawns) as Eval * doubled_penalty;
 
     // Isolated pawns - penalty that increases in the endgame
-    let isolated_penalty = interpolate_phase(phase, 17, 31);
+    let isolated_penalty = interpolate_phase(phase, 16, 30);
     eval -= isolated_pawns(white_pawns).0.count_ones() as Eval * isolated_penalty;
     eval += isolated_pawns(black_pawns).0.count_ones() as Eval * isolated_penalty;
 
-    // Passed pawns - bonus that increases in the endgame
-    let passed_bonus = interpolate_phase(phase, 14, 39);
-    eval += passed_pawns_white(white_pawns, black_pawns) as Eval * passed_bonus;
-    eval -= passed_pawns_black(black_pawns, white_pawns) as Eval * passed_bonus;
+    // Passed pawns - bonus that increases in the endgame and scales with how far the pawn
+    // has advanced (closer to promotion is worth more).
+    let passed_bonus = interpolate_phase(phase, 15, 41);
+    eval += passed_pawns_white(white_pawns, black_pawns, passed_bonus);
+    eval -= passed_pawns_black(black_pawns, white_pawns, passed_bonus);
 
     eval
 }
 
-// Count white pawns that no black pawn can stop from promoting.
-fn passed_pawns_white(white_pawns: BitBoard, black_pawns: BitBoard) -> u32 {
-    let mut count = 0;
+// Per-rank multiplier (in percent of the base bonus) for a passed pawn
+const PASSED_RANK_SCALE: [i32; 8] = [0, 100, 105, 115, 140, 195, 255, 0];
+
+// Sum the passed-pawn bonus for white pawns that no black pawn can stop from promoting,
+// scaling each by its advancement toward promotion.
+fn passed_pawns_white(white_pawns: BitBoard, black_pawns: BitBoard, base_bonus: Eval) -> Eval {
+    let mut score: Eval = 0;
     for sq in white_pawns {
         if WHITE_PASSED_MASK[sq.idx()] & black_pawns == BitBoard(0) {
-            count += 1;
+            let rank = sq.idx() / 8;
+            score += (base_bonus as i32 * PASSED_RANK_SCALE[rank] / 100) as Eval;
         }
     }
-    count
+    score
 }
 
-// Count black pawns that no white pawn can stop from promoting.
-fn passed_pawns_black(black_pawns: BitBoard, white_pawns: BitBoard) -> u32 {
-    let mut count = 0;
+// Sum the passed-pawn bonus for black pawns that no white pawn can stop from promoting,
+// scaling each by its advancement toward promotion.
+fn passed_pawns_black(black_pawns: BitBoard, white_pawns: BitBoard, base_bonus: Eval) -> Eval {
+    let mut score: Eval = 0;
     for sq in black_pawns {
         if BLACK_PASSED_MASK[sq.idx()] & white_pawns == BitBoard(0) {
-            count += 1;
+            let rank = 7 - sq.idx() / 8;
+            score += (base_bonus as i32 * PASSED_RANK_SCALE[rank] / 100) as Eval;
         }
     }
-    count
+    score
 }
 
 // Count files holding two or more of these pawns (each such file counts once).
