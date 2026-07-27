@@ -76,7 +76,7 @@ Move generation is validated with [perft](https://www.chessprogramming.org/Perft
 references, which also doubles as a raw nodes-per-second benchmark.
 
 | Position      | Depth | Nodes         | Matches reference | MN/s  |
-|---------------|------:|--------------:|:-----------------:|------:|
+|---------------|-------|---------------|-------------------|-------|
 | startpos      |     6 |   119,060,324 |         ✅        | 40.23 |
 | kiwipete      |     5 |   193,690,690 |         ✅        | 42.49 |
 | Rook Pawn     |     7 |   178,633,661 |         ✅        | 36.23 |
