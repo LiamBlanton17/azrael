@@ -322,7 +322,7 @@ fn pawn_structure_eval(p: &Position, phase: i32) -> Eval {
 
     // Passed pawns - bonus that increases in the endgame and scales with how far the pawn
     // has advanced (closer to promotion is worth more).
-    let passed_bonus = interpolate_phase(phase, 15, 41);
+    let passed_bonus = interpolate_phase(phase, 19, 61);
     eval += passed_pawns_white(white_pawns, black_pawns, passed_bonus);
     eval -= passed_pawns_black(black_pawns, white_pawns, passed_bonus);
 
@@ -330,7 +330,7 @@ fn pawn_structure_eval(p: &Position, phase: i32) -> Eval {
 }
 
 // Per-rank multiplier (in percent of the base bonus) for a passed pawn
-const PASSED_RANK_SCALE: [i32; 8] = [0, 100, 105, 115, 140, 195, 255, 0];
+const PASSED_RANK_SCALE: [i32; 8] = [0, 100, 105, 125, 155, 215, 295, 0];
 
 // Sum the passed-pawn bonus for white pawns that no black pawn can stop from promoting,
 // scaling each by its advancement toward promotion.
