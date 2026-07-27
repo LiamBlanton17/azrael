@@ -7,6 +7,8 @@ use crate::types::square::{self, Square};
 use crate::search::magics::bishop::get_bishop_moves;
 use crate::search::magics::rook::get_rook_moves;
 
+use std::io::{self, Write};
+
 impl Position {
 
     #[inline]
@@ -459,9 +461,9 @@ impl Position {
         self.half_moves > 99
     }
 
-    pub fn print(&self) {
+    pub fn print<W: Write>(&self, w: &mut W) -> io::Result<()> {
         for row in (0..8).rev() {
-            print!("{} ", row + 1);
+            write!(w, "{} ", row + 1)?;
             for col in 0..8 {
                 let sq = Square::from_row_col(row, col);
                 let piece = self.mailbox[sq.idx()];
@@ -470,15 +472,16 @@ impl Position {
                 } else {
                     Color::Black
                 };
-                print!("{} ", piece.to_char(color));
+                write!(w, "{} ", piece.to_char(color))?;
             }
-            println!();
+            writeln!(w)?;
         }
-        println!("  a b c d e f g h");
-        println!(
+        writeln!(w, "  a b c d e f g h")?;
+        writeln!(
+            w,
             "turn: {:?}, castling: {:04b}, en passant: {:?}, half moves: {}",
             self.turn, self.castling_rights, self.en_passant, self.half_moves
-        );
+        )
     }
 
     pub fn iter(&self) -> PositionIter<'_> {

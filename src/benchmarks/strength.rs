@@ -1,5 +1,5 @@
 use std::fs::{self, File};
-use std::io::{BufRead, BufReader};
+use std::io::{self, BufRead, BufReader};
 use std::time::{Duration, Instant};
 
 use crate::search::{RootSearchType, init_engine};
@@ -68,7 +68,7 @@ fn load_test(line: &str) -> Option<BenchmarkTest> {
         match position.san_to_move(move_san) {
             Ok(mv) => candidates.push(BenchmarkTestCandidate { mv, points }),
             Err(e) => {
-                position.print();
+                let _ = position.print(&mut io::stdout());
                 panic!("Failed to resolve SAN '{}' in {}: {}", move_san, id, e);
             }
         }

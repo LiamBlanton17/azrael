@@ -119,6 +119,8 @@ pub fn uci_cmd() {
                 );
                 current_eval = e;
                 println!("bestmove {}", p.move_to_la(m));
+                eprintln!("Current Eval: {}", e);
+                let _ = p.print(&mut io::stderr());
                 io::stdout().flush().unwrap();
             },
             "stop" => continue 'outerloop,
@@ -128,7 +130,7 @@ pub fn uci_cmd() {
                 // this is NOT a standard uci command
                 // custom command for printing the board to stdout
                 if let Some(p) = &position {
-                    p.print();
+                    let _ = p.print(&mut io::stdout());
                     io::stdout().flush().unwrap();
                 }
             }
