@@ -16,6 +16,8 @@ pub struct NegamaxSearcher<'a> {
     pub killers: &'a mut Vec<(Move, Move)>,
     pub history_heuristic: &'a mut [[[i16; 64]; 64]; 2],
     pub tt: &'a mut TranspositionTable,
+    pub nodes: u64,
+    pub q_nodes: u64,
 }
 
 #[derive(Clone, Copy)]
@@ -30,15 +32,17 @@ pub struct NegamaxSearchParams {
 pub struct NegamaxSearchResult {
     pub eval: Eval,
     pub best_move: Move,
-    pub nodes: u64,
-    pub q_nodes: u64,
     pub is_three_fold: bool,
+    pub is_aborted: bool,
 }
 
 impl NegamaxSearcher<'_> {
 
     // Return eval, move, negamax nodes, quiescence nodes
     pub fn search(&mut self, p: &mut Position, params: NegamaxSearchParams) -> NegamaxSearchResult {
+
+        // increase node count by 1 at top of each node
+        self.nodes += 1;
 
         // aliases for all the params
         let ply = params.ply;
@@ -52,9 +56,8 @@ impl NegamaxSearcher<'_> {
             return NegamaxSearchResult {
                 eval: 0,
                 best_move: 0,
-                nodes: 0,
-                q_nodes: 0,
                 is_three_fold: true,
+                is_aborted: false,
             };
         }
 
@@ -79,9 +82,8 @@ impl NegamaxSearcher<'_> {
                     return NegamaxSearchResult {
                         eval: tt_score,
                         best_move: tt_move,
-                        nodes: 1,
-                        q_nodes: 0,
                         is_three_fold: false,
+                        is_aborted: false,
                     };
                 }
             }
@@ -90,12 +92,12 @@ impl NegamaxSearcher<'_> {
         // if at depth, run the quiescence search
         if depth == 0 {
             let (e, m, q_nodes) = quiescence(p, ply, alpha, beta, &mut self.move_stack, &mut self.history, &mut self.history_heuristic, &mut self.tt);
+            self.q_nodes += q_nodes;
             return NegamaxSearchResult {
                 eval: e,
                 best_move: m,
-                nodes: 0,
-                q_nodes: q_nodes,
                 is_three_fold: false,
+                is_aborted: false,
             };
         }
 
@@ -108,21 +110,19 @@ impl NegamaxSearcher<'_> {
         let stand_pat;
         const RAZOR_MARGIN: Eval = 185;
         const RAZOR_DEPTH: usize = 2;
-        let mut razor_q_nodes = 0;
         if depth <= RAZOR_DEPTH && !in_check {
             stand_pat = p.eval_relative();
             if stand_pat + RAZOR_MARGIN * (depth as Eval) < alpha {
                 let (e, m, q_nodes) = quiescence(p, ply, alpha, beta, &mut self.move_stack, &mut self.history, &mut self.history_heuristic, &mut self.tt);
+                self.q_nodes += q_nodes;
                 if e < alpha {
                     return NegamaxSearchResult {
                         eval: e,
                         best_move: m,
-                        nodes: 0,
-                        q_nodes: q_nodes,
                         is_three_fold: false,
+                        is_aborted: false,
                     };
                 }
-                razor_q_nodes = q_nodes;
             }
         }
 
@@ -146,9 +146,8 @@ impl NegamaxSearcher<'_> {
                     return NegamaxSearchResult {
                         eval: beta,
                         best_move: 0,
-                        nodes: nmp_result.nodes + 1,
-                        q_nodes: nmp_result.q_nodes,
                         is_three_fold: false,
+                        is_aborted: false,
                     };
                 }
             }
@@ -164,8 +163,6 @@ impl NegamaxSearcher<'_> {
         self.history.push(p.zobrist);
 
         // recursive negamax search
-        let mut q_nodes = razor_q_nodes;
-        let mut nodes = 1;
         let mut best_eval = eval::MIN_EVAL;
         let mut best_move = 0;
         let mut found_legal_move = false;
@@ -194,7 +191,6 @@ impl NegamaxSearcher<'_> {
                     
                     // full search if reduced window search if it failed over alpha
                     if -child.eval > alpha && -child.eval < beta {
-                        let (n, qn) = (child.nodes, child.q_nodes);
                         child = self.search(p, NegamaxSearchParams { 
                             depth: relative_depth, 
                             ply: ply + 1, 
@@ -202,8 +198,6 @@ impl NegamaxSearcher<'_> {
                             beta: -alpha,
                             is_nmp_search: false,
                         });
-                        child.nodes += n;
-                        child.q_nodes += qn;
                     }
                 } else {
                     // full search if reduced window search didn't happen
@@ -217,8 +211,6 @@ impl NegamaxSearcher<'_> {
                 }
 
                 // updates based on child results
-                nodes += child.nodes;
-                q_nodes += child.q_nodes;
                 if -child.eval > best_eval {
                     best_eval = -child.eval;
                     best_move = m;
@@ -267,9 +259,9 @@ impl NegamaxSearcher<'_> {
 
         if !found_legal_move {
             if in_check {
-                NegamaxSearchResult { eval: -MATE + ply as i16, best_move: 0, nodes, q_nodes, is_three_fold: false }
+                NegamaxSearchResult { eval: -MATE + ply as i16, best_move: 0, is_three_fold: false, is_aborted: false, }
             } else {
-                NegamaxSearchResult { eval: 0, best_move: 0, nodes, q_nodes, is_three_fold: false }
+                NegamaxSearchResult { eval: 0, best_move: 0, is_three_fold: false, is_aborted: false, }
             }
         } else {
             // Store the result in the TT as well as return it
@@ -281,7 +273,7 @@ impl NegamaxSearcher<'_> {
                 Bound::Exact
             };
             self.tt.store(p.zobrist, best_move, score_to_tt(best_eval, ply), depth as u8, bound);
-            NegamaxSearchResult { eval: best_eval, best_move: best_move, nodes, q_nodes, is_three_fold: false }
+            NegamaxSearchResult { eval: best_eval, best_move: best_move, is_three_fold: false, is_aborted: false, }
         }
 
     }

@@ -98,6 +98,8 @@ fn stable_time_search(p: &mut Position, budget: Duration, game_history: &[Zobris
             killers: &mut killers,
             history_heuristic: &mut history_heuristic,
             tt,
+            nodes: 0,
+            q_nodes: 0,
         };
 
         // negamax search to this depth
@@ -110,11 +112,9 @@ fn stable_time_search(p: &mut Position, budget: Duration, game_history: &[Zobris
                 beta: MATE,
                 is_nmp_search: false,
             });
-            (result.eval, result.best_move, result.nodes, result.q_nodes)
+            (result.eval, result.best_move, searcher.nodes, searcher.q_nodes)
         } else {
             let mut window: i32 = 25;
-            let mut asp_n = 0;
-            let mut asp_qn = 0;
             loop {
                 let alpha = (best_eval as i32 - window).max(-(MATE as i32)) as Eval;
                 let beta  = (best_eval as i32 + window).min(  MATE as i32) as Eval;
@@ -125,15 +125,13 @@ fn stable_time_search(p: &mut Position, budget: Duration, game_history: &[Zobris
                     beta,
                     is_nmp_search: false,
                 });
-                asp_n += result.nodes;
-                asp_qn += result.q_nodes;
                 let e = result.eval;
                 // re-search only if we failed AND still have room to widen
                 if (e <= alpha && alpha > -(MATE)) || (e >= beta && beta < MATE) {
                     window *= 4;
                     continue;
                 }
-                break (e, result.best_move, asp_n, asp_qn);
+                break (e, result.best_move, searcher.nodes, searcher.q_nodes);
             }
         };
         last_search_time = last_search_start.elapsed();
@@ -194,6 +192,8 @@ fn time_search(p: &mut Position, budget: Duration, game_history: &[ZobristHash],
             killers: &mut killers, 
             history_heuristic: &mut history_heuristic, 
             tt,
+            nodes: 0,
+            q_nodes: 0,
         };
 
         // negamax search to this depth
@@ -206,11 +206,9 @@ fn time_search(p: &mut Position, budget: Duration, game_history: &[ZobristHash],
                 beta: MATE,
                 is_nmp_search: false,
             });
-            (result.eval, result.best_move, result.nodes, result.q_nodes)
+            (result.eval, result.best_move, searcher.nodes, searcher.q_nodes)
         } else {
             let mut window: i32 = 25;
-            let mut asp_n = 0;
-            let mut asp_qn = 0;
             loop {
                 let alpha = (best_eval as i32 - window).max(-(MATE as i32)) as Eval;
                 let beta  = (best_eval as i32 + window).min(  MATE as i32) as Eval;
@@ -221,15 +219,13 @@ fn time_search(p: &mut Position, budget: Duration, game_history: &[ZobristHash],
                     beta,
                     is_nmp_search: false,
                 });
-                asp_n += result.nodes;
-                asp_qn += result.q_nodes;
                 let e = result.eval;
                 // re-search only if we failed AND still have room to widen
                 if (e <= alpha && alpha > -(MATE)) || (e >= beta && beta < MATE) {
                     window *= 4;
                     continue;
                 }
-                break (e, result.best_move, asp_n, asp_qn);
+                break (e, result.best_move, searcher.nodes, searcher.q_nodes);
             }
         };
         last_search_time = last_search_start.elapsed();
@@ -274,6 +270,8 @@ fn stable_depth_search(p: &mut Position, depth: usize, game_history: &[ZobristHa
             killers: &mut killers,
             history_heuristic: &mut history_heuristic,
             tt,
+            nodes: 0,
+            q_nodes: 0,
         };
 
         // negamax search to this depth
@@ -285,11 +283,9 @@ fn stable_depth_search(p: &mut Position, depth: usize, game_history: &[ZobristHa
                 beta: MATE,
                 is_nmp_search: false,
             });
-            (result.eval, result.best_move, result.nodes, result.q_nodes)
+            (result.eval, result.best_move, searcher.nodes, searcher.q_nodes)
         } else {
             let mut window: i32 = 25;
-            let mut asp_n = 0;
-            let mut asp_qn = 0;
             loop {
                 let alpha = (best_eval as i32 - window).max(-(MATE as i32)) as Eval;
                 let beta  = (best_eval as i32 + window).min(  MATE as i32) as Eval;
@@ -300,15 +296,13 @@ fn stable_depth_search(p: &mut Position, depth: usize, game_history: &[ZobristHa
                     beta,
                     is_nmp_search: false,
                 });
-                asp_n += result.nodes;
-                asp_qn += result.q_nodes;
                 let e = result.eval;
                 // re-search only if we failed AND still have room to widen
                 if (e <= alpha && alpha > -(MATE)) || (e >= beta && beta < MATE) {
                     window *= 4;
                     continue;
                 }
-                break (e, result.best_move, asp_n, asp_qn);
+                break (e, result.best_move, searcher.nodes, searcher.q_nodes);
             }
         };
 
@@ -363,6 +357,8 @@ fn depth_search(p: &mut Position, depth: usize, game_history: &[ZobristHash], tt
             killers: &mut killers,
             history_heuristic: &mut history_heuristic,
             tt,
+            nodes: 0,
+            q_nodes: 0,
         };
 
         // negamax search to this depth
@@ -374,11 +370,9 @@ fn depth_search(p: &mut Position, depth: usize, game_history: &[ZobristHash], tt
                 beta: MATE,
                 is_nmp_search: false,
             });
-            (result.eval, result.best_move, result.nodes, result.q_nodes)
+            (result.eval, result.best_move, searcher.nodes, searcher.q_nodes)
         } else {
             let mut window: i32 = 25;
-            let mut asp_n = 0;
-            let mut asp_qn = 0;
             loop {
                 let alpha = (best_eval as i32 - window).max(-(MATE as i32)) as Eval;
                 let beta  = (best_eval as i32 + window).min(  MATE as i32) as Eval;
@@ -389,15 +383,13 @@ fn depth_search(p: &mut Position, depth: usize, game_history: &[ZobristHash], tt
                     beta,
                     is_nmp_search: false,
                 });
-                asp_n += result.nodes;
-                asp_qn += result.q_nodes;
                 let e = result.eval;
                 // re-search only if we failed AND still have room to widen
                 if (e <= alpha && alpha > -(MATE)) || (e >= beta && beta < MATE) {
                     window *= 4;
                     continue;
                 }
-                break (e, result.best_move, asp_n, asp_qn);
+                break (e, result.best_move, searcher.nodes, searcher.q_nodes);
             }
         };
 
