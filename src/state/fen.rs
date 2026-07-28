@@ -232,12 +232,15 @@ fn parse_half_moves(position: &mut Position, half_moves: &str) -> bool {
 #[cfg(test)]
 mod tests {
 
-    use crate::types::bidboard::BitBoard;
+    use crate::{state::zobrist::init_zobrist, types::bidboard::BitBoard};
 
 use super::*;
 
     #[test]
     fn test_from_fen() {
+        
+        // fen parsing uses zobrist hash
+        init_zobrist();
 
         struct Test {
             fen: &'static str,
@@ -279,10 +282,10 @@ use super::*;
                         // Rank 8 (a8-h8) — Black back rank
                         Piece::Rook, Piece::Knight, Piece::Bishop, Piece::Queen, Piece::King, Piece::Bishop, Piece::Knight, Piece::Rook,
                     ],
-                    zobrist: 0,
+                    zobrist: 0, // filled in via set_zobrist() below
                     pst_opening: 0,
                     pst_endgame: 0,
-                    phase_material: 24,
+                    phase_material: 54,
                     half_moves: 0,
                     castling_rights: 0b1111,
                     en_passant: None,
@@ -293,7 +296,11 @@ use super::*;
         ];
 
         for test in tests {
-            assert_eq!(Position::from_fen(test.fen), test.want, "Failed for test: {}", test.description);
+            let mut want = test.want;
+            if let Ok(ref mut p) = want {
+                p.set_zobrist();
+            }
+            assert_eq!(Position::from_fen(test.fen), want, "Failed for test: {}", test.description);
         }
 
     }
