@@ -24,6 +24,7 @@ A UCI chess engine written from scratch in Rust — bitboard move generation, an
 - [Principal Variation Search](https://www.chessprogramming.org/Principal_Variation_Search) with null-window re-search
 - [Null-move pruning](https://www.chessprogramming.org/Null_Move_Pruning)
 - [Aspiration windows](https://www.chessprogramming.org/Aspiration_Windows)
+- [Static Exchange Evaluation](https://www.chessprogramming.org/Static_Exchange_Evaluation)
 - Razoring at low depths
 - Check and root depth extensions
 - [Quiescence search](https://www.chessprogramming.org/Quiescence_Search) with delta pruning and check-evasion handling
