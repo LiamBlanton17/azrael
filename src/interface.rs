@@ -41,47 +41,38 @@ pub fn uci_cmd() {
                 tt.clear();
             },
             "position" => {
-                // must have at least 3 arguments
-                if args_len < 3 {
-                    continue 'outerloop;
+                if args_len < 2 { 
+                    continue 'outerloop; 
                 }
 
-                // must have 8 arguments for fen positions
-                if args[1] == "fen" && args_len < 8 {
-                    continue 'outerloop;
-                }
-
-                // Read in fen string or start position
-                let mut start_of_moves = 3;
-                let fen: String = if args[1] == "startpos" {
-                    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1".to_string()
-                } else {
-                    start_of_moves = 8;
-                    args[2..8].join(" ")
+                let moves_idx = args.iter().position(|a| a == "moves");
+                let fen_end = moves_idx.unwrap_or(args_len);
+                let start_of_moves = moves_idx.map_or(args_len, |i| i + 1);
+                let fen = match args[1].as_str() {
+                    "startpos" => "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1".to_string(),
+                    "fen" if fen_end > 2 => args[2..fen_end].join(" "),
+                    _ => continue 'outerloop,
                 };
-                match Position::from_fen(fen.as_str()) {
-                    Ok(p) => position = Some(p),
-                    Err(_) => continue,
-                }
-                
-                // Play all moves given over the start position so the search can see repetitions
-                let mut p = position.expect("Position must be set");
-                let mut new_history: Vec<ZobristHash> = Vec::with_capacity(args.len().saturating_sub(start_of_moves));
+
+                let mut p = match Position::from_fen(&fen) {
+                    Ok(p) => p,
+                    Err(e) => {
+                        eprintln!("info string bad fen: {:?}", e);
+                        continue 'outerloop;
+                    }
+                };
+
+                let mut new_history = Vec::with_capacity(args_len - start_of_moves);
                 for long_alg in &args[start_of_moves..] {
                     match p.move_from_la(long_alg) {
-                        Ok(m) => {
-                            new_history.push(p.zobrist);
-                            p.make_move(m);
-                        },
+                        Ok(m) => { new_history.push(p.zobrist); p.make_move(m); }
                         Err(_) => {
-                            position = None;
-                            game_history.clear();
+                            eprintln!("info string bad move: {}", long_alg);
                             continue 'outerloop;
                         }
                     }
                 }
 
-                // Set the position to this new position
                 position = Some(p);
                 game_history = new_history;
             },
