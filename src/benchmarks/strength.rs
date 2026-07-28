@@ -101,6 +101,7 @@ pub fn strength_test() {
     // one accumulator slot per time limit
     let mut total_score = [0u32; NUM_LIMITS];
     let mut total_nodes = [0u64; NUM_LIMITS];
+    let mut total_q_nodes = [0u64; NUM_LIMITS];
     let mut best_moves_found = [0u32; NUM_LIMITS];
     let mut total_search_duration = [Duration::new(0, 0); NUM_LIMITS];
     let mut total_abf = [0.0f64; NUM_LIMITS];
@@ -179,6 +180,7 @@ pub fn strength_test() {
 
                 total_score[i] += scored;
                 total_nodes[i] += nodes + q_nodes;
+                total_q_nodes[i] += q_nodes;
                 if scored == best_available {
                     best_moves_found[i] += 1;
                 }
@@ -202,6 +204,14 @@ pub fn strength_test() {
         println!("Best moves found: {}/{} ({:.2})", best_moves_found[i], tests_run, best_moves_found[i] as f64 / tests_run as f64);
         println!("Search time: {:?}", total_search_duration[i]);
         println!("Total nodes: {}", crate::format_with_commas(total_nodes[i]));
+        let negamax_nodes = total_nodes[i] - total_q_nodes[i];
+        let q_pct = if total_nodes[i] > 0 {
+            100.0 * total_q_nodes[i] as f64 / total_nodes[i] as f64
+        } else {
+            0.0
+        };
+        println!("  negamax nodes: {}", crate::format_with_commas(negamax_nodes));
+        println!("  quiescence nodes: {} ({:.1}%)", crate::format_with_commas(total_q_nodes[i]), q_pct);
         println!("Avg. Depth: {:.2}", (total_depth[i] as f64 / tests_run as f64));
         println!("MN/S: {:.2}", mnps);
         println!("ABF: {:.2}", (total_abf[i] / tests_run as f64));

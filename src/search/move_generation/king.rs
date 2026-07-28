@@ -19,7 +19,7 @@ impl Position {
         let friendly = self.get_friendly_pieces();
         let enemy = self.get_enemy_pieces();
 
-        let moves = unsafe { KING_MOVES[king_sq.idx()] } & !friendly;
+        let moves = KING_MOVES[king_sq.idx()] & !friendly;
         let (targets, castling) = match level {
             MoveGenLevel::All => (moves, true),
             MoveGenLevel::Captures => (moves & enemy, false),
@@ -46,7 +46,7 @@ impl Position {
     // Returns true if king for the color given can capture the square give
     pub fn is_square_underattack_by_king(&self, sq: Square, c: Color) -> bool {
         let king: BitBoard = self.get_piece(Piece::King, c);
-        unsafe { KING_MOVES[sq.idx()] & king != BitBoard(0) }
+        KING_MOVES[sq.idx()] & king != BitBoard(0)
     }
 
 }

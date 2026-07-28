@@ -4,10 +4,10 @@ pub mod negamax;
 pub mod quiescence;
 pub mod move_ordering;
 pub mod tt;
+pub mod see;
 
 use crate::search::magics::bishop::init_bishop_magic;
 use crate::search::magics::rook::init_rook_magic;
-use crate::search::move_generation::{init_king_moves, init_knight_moves};
 use crate::search::negamax::{NegamaxSearchParams, NegamaxSearcher};
 use crate::search::tt::TranspositionTable;
 use crate::state::zobrist::init_zobrist;
@@ -432,6 +432,4 @@ pub fn init_engine() {
     init_rook_magic();
     init_bishop_magic();
     init_rook_magic();
-    init_king_moves();
-    init_knight_moves();
 }

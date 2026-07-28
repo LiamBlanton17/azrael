@@ -9,7 +9,7 @@ use crate::types::position::{Position, ZobristHash};
 pub fn uci_cmd() {
 
     init_engine();
-    let mut tt = TranspositionTable::new(256);
+    let mut tt = TranspositionTable::new(512);
     let mut position = None;
     let mut game_history: Vec<ZobristHash> = Vec::new();
     let mut current_eval = 0;

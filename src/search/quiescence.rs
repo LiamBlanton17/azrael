@@ -66,20 +66,31 @@ pub fn quiescence(
     for i in 0..num_moves {
         let m = move_stack[ply][i];
 
-        // delta pruning
-        // https://www.chessprogramming.org/Delta_Pruning
+        // When not in check, filter losing/hopeless captures before searching them.
+        // Promotions are always kept: they usually swing material by far more than
+        // the immediate exchange, so neither prune applies to them.
         if !in_check {
-            const DELTA_MARGIN: Eval = PAWN * 2;
-            let (dest, _, _, flag) = split_move(m);
-            // never prune promotion captures
+            let (dest, orig, _, flag) = split_move(m);
             if flag != MOVE_FLAG_PROMO {
-                // captured piece is on destination, unless en passant then just a pawn
                 let value_of_captured_piece = if flag == MOVE_FLAG_ENPASSANT {
                     PAWN
                 } else {
                     p.mailbox[dest.idx()].to_value()
                 };
+
+                // Delta pruning - https://www.chessprogramming.org/Delta_Pruning
+                // If even winning the piece on `dest` can't climb near alpha, skip it.
+                const DELTA_MARGIN: Eval = PAWN * 2;
                 if stand_pat + value_of_captured_piece + DELTA_MARGIN < alpha {
+                    continue;
+                }
+
+                // SEE pruning: skip captures that lose material on the exchange
+                // square (e.g. grabbing a defended pawn with a rook). Only captures
+                // of a less valuable piece can lose material, so the SEE probe is
+                // skipped entirely for equal-or-up captures.
+                let attacker_value = p.mailbox[orig.idx()].to_value();
+                if value_of_captured_piece < attacker_value && !p.see_ge(m, 0) {
                     continue;
                 }
             }

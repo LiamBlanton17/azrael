@@ -94,41 +94,46 @@ const NOT_B_FILE: BitBoard = BitBoard(0xFDFDFDFDFDFDFDFD);
 const NOT_G_FILE: BitBoard = BitBoard(0xBFBFBFBFBFBFBFBF);
 const NOT_H_FILE: BitBoard = BitBoard(0x7F7F7F7F7F7F7F7F);
 
-static mut KNIGHT_MOVES: [BitBoard; 64] = [BitBoard(0); 64];
-static mut KING_MOVES: [BitBoard; 64] = [BitBoard(0); 64];
+pub const KNIGHT_MOVES: [BitBoard; 64] = init_knight_moves();
+pub const KING_MOVES: [BitBoard; 64] = init_king_moves();
 
-pub fn init_knight_moves() {
-    for i in 0..64 {
-        let bb = Square(i as u8).to_bitboard();
-        unsafe {
-            KNIGHT_MOVES[i] =
-                ((bb << 17) & NOT_A_FILE) |                  // 2 UP, 1 RIGHT
-                ((bb << 10) & NOT_A_FILE & NOT_B_FILE) |     // 1 UP, 2 RIGHT
-                ((bb >> 6) & NOT_A_FILE & NOT_B_FILE) |      // 1 DOWN, 2 RIGHT
-                ((bb >> 15) & NOT_A_FILE) |                  // 2 DOWN, 1 RIGHT
-                ((bb << 15) & NOT_H_FILE) |                  // 2 UP, 1 LEFT
-                ((bb << 6) & NOT_H_FILE & NOT_G_FILE) |      // 1 UP, 2 LEFT
-                ((bb >> 10) & NOT_H_FILE & NOT_G_FILE) |     // 1 DOWN, 2 LEFT
-                ((bb >> 17) & NOT_H_FILE)                    // 2 DOWN, 1 LEFT
-            ;
-        }
+// BitBoard's operator traits aren't const, so compute the tables on raw u64s.
+const fn init_knight_moves() -> [BitBoard; 64] {
+    let mut table = [BitBoard(0); 64];
+    let mut i = 0;
+    while i < 64 {
+        let bb: u64 = 1u64 << i;
+        table[i] = BitBoard(
+            ((bb << 17) & NOT_A_FILE.0) |                    // 2 UP, 1 RIGHT
+            ((bb << 10) & NOT_A_FILE.0 & NOT_B_FILE.0) |     // 1 UP, 2 RIGHT
+            ((bb >> 6) & NOT_A_FILE.0 & NOT_B_FILE.0) |      // 1 DOWN, 2 RIGHT
+            ((bb >> 15) & NOT_A_FILE.0) |                    // 2 DOWN, 1 RIGHT
+            ((bb << 15) & NOT_H_FILE.0) |                    // 2 UP, 1 LEFT
+            ((bb << 6) & NOT_H_FILE.0 & NOT_G_FILE.0) |      // 1 UP, 2 LEFT
+            ((bb >> 10) & NOT_H_FILE.0 & NOT_G_FILE.0) |     // 1 DOWN, 2 LEFT
+            ((bb >> 17) & NOT_H_FILE.0)                      // 2 DOWN, 1 LEFT
+        );
+        i += 1;
     }
+    table
 }
 
-pub fn init_king_moves() {
-    for i in 0..64 {
-        let bb = Square(i as u8).to_bitboard();
-        unsafe {
-            KING_MOVES[i] =
-                (bb << 8) |                   // north
-                (bb >> 8) |                   // south
-                ((bb << 1) & NOT_A_FILE) |    // east
-                ((bb >> 1) & NOT_H_FILE) |    // west
-                ((bb << 9) & NOT_A_FILE) |    // north-east
-                ((bb << 7) & NOT_H_FILE) |    // north-west
-                ((bb >> 7) & NOT_A_FILE) |    // south-east
-                ((bb >> 9) & NOT_H_FILE)      // south-west
-            ;
-        }
+const fn init_king_moves() -> [BitBoard; 64] {
+    let mut table = [BitBoard(0); 64];
+    let mut i = 0;
+    while i < 64 {
+        let bb: u64 = 1u64 << i;
+        table[i] = BitBoard(
+            (bb << 8) |                     // north
+            (bb >> 8) |                     // south
+            ((bb << 1) & NOT_A_FILE.0) |    // east
+            ((bb >> 1) & NOT_H_FILE.0) |    // west
+            ((bb << 9) & NOT_A_FILE.0) |    // north-east
+            ((bb << 7) & NOT_H_FILE.0) |    // north-west
+            ((bb >> 7) & NOT_A_FILE.0) |    // south-east
+            ((bb >> 9) & NOT_H_FILE.0)      // south-west
+        );
+        i += 1;
     }
+    table
 }

@@ -18,7 +18,7 @@ impl Position {
         let enemy = self.get_enemy_pieces();
 
         for knight in knights {
-            let moves = unsafe { KNIGHT_MOVES[knight.idx()] } & !friendly;
+            let moves = KNIGHT_MOVES[knight.idx()] & !friendly;
             let targets = match level {
                 MoveGenLevel::All => moves,
                 MoveGenLevel::Captures => moves & enemy,
@@ -34,7 +34,7 @@ impl Position {
     // Returns true if knight for the color given can capture the square give
     pub fn is_square_underattack_by_knight(&self, sq: Square, c: Color) -> bool {
         let knights: BitBoard = self.get_piece(Piece::Knight, c);
-        unsafe { KNIGHT_MOVES[sq.idx()] & knights != BitBoard(0) }
+        KNIGHT_MOVES[sq.idx()] & knights != BitBoard(0)
     }
 
 }
