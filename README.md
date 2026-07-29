@@ -1,6 +1,6 @@
 # Azrael
 
-A UCI chess engine written from scratch in Rust — bitboard move generation, an alpha-beta search with modern pruning, and a hand-tuned evaluation.
+A UCI chess engine written from scratch in Rust — bitboard move generation, an alpha-beta search with modern pruning, and a tapered evaluation built on PeSTO's tuned piece-square tables.
 
 [![CI](https://github.com/LiamBlanton17/azrael/actions/workflows/ci.yml/badge.svg)](https://github.com/LiamBlanton17/azrael/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -32,8 +32,8 @@ A UCI chess engine written from scratch in Rust — bitboard move generation, an
 - Move ordering: TT move, [killer moves](https://www.chessprogramming.org/Killer_Heuristic), and a [history heuristic](https://www.chessprogramming.org/History_Heuristic)
 
 **Evaluation**
-- Material and [piece-square tables](https://www.chessprogramming.org/Piece-Square_Tables), evaluated incrementally
-- Pawn structure, king safety, and open/semi-open file terms
+- Material and [piece-square tables](https://www.chessprogramming.org/Piece-Square_Tables) from [PeSTO](https://www.chessprogramming.org/PeSTO%27s_Evaluation_Function) (Texel-tuned by Ronald Friederich), with material folded into the tables and evaluated incrementally
+- Hand-tuned pawn structure, king safety, and open/semi-open file terms
 - Bishop-pair and tempo bonuses
 - Tapered evaluation across game phases, with lazy evaluation
 
@@ -93,12 +93,12 @@ simplification, and more — and scores how often it finds the annotated best mo
 
 | Depth | Score               | Best move found  | Time     | Nodes         | MN/s | ABF  |
 |-------|---------------------|------------------|----------|---------------|------|------|
-|     3 | 2,428 / 6,770 (36%) | 157 / 677 (23%)  |   0.4 s  |       959,378 | 2.72 | 8.35 |
-|     5 | 2,771 / 6,770 (41%) | 183 / 677 (27%)  |   1.0 s  |     4,063,676 | 4.02 | 4.83 |
-|     7 | 3,157 / 6,770 (47%) | 224 / 677 (33%)  |   4.2 s  |    16,792,703 | 3.99 | 3.81 |
-|     9 | 3,545 / 6,770 (52%) | 261 / 677 (39%)  |  13.9 s  |    55,532,359 | 3.99 | 3.24 |
-|    13 | 4,008 / 6,770 (59%) | 301 / 677 (44%)  | 130.4 s  |   520,043,863 | 3.99 | 2.67 |
-|    15 | 4,181 / 6,770 (62%) | 322 / 677 (48%)  | 390.5 s  | 1,542,018,803 | 3.95 | 2.52 |
+|     3 | 2,643 / 6,770 (39%) | 174 / 677 (26%)  |   0.3 s  |       911,459 | 3.46 | 8.26 |
+|     5 | 2,857 / 6,770 (42%) | 197 / 677 (29%)  |   1.0 s  |     3,857,620 | 3.90 | 4.79 |
+|     7 | 3,217 / 6,770 (48%) | 226 / 677 (33%)  |   3.8 s  |    15,834,044 | 4.17 | 3.78 |
+|     9 | 3,649 / 6,770 (54%) | 273 / 677 (40%)  |  12.2 s  |    51,463,637 | 4.21 | 3.21 |
+|    13 | 4,143 / 6,770 (61%) | 319 / 677 (47%)  | 121.0 s  |   485,241,733 | 4.01 | 2.66 |
+|    15 | 4,416 / 6,770 (65%) | 343 / 677 (51%)  | 362.3 s  | 1,424,570,275 | 3.93 | 2.51 |
 
 _Score is total points earned across the suite's weighted candidate moves; **Best move found** counts positions where Azrael played the top-rated move. **MN/s** is millions of nodes searched per second; **ABF** is the effective branching factor (lower means more aggressive pruning)._
 
