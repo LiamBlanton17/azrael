@@ -16,7 +16,7 @@ pub const BISHOP: Eval = 330;
 pub const ROOK: Eval = 515;
 pub const QUEEN: Eval = 945;
 
-// Weights for calculating game phase (Non-Pawn Material is standard).
+// Weights for calculating game phase
 const PAWN_PHASE: i32 = 0;
 const KNIGHT_PHASE: i32 = 2;
 const BISHOP_PHASE: i32 = 2;
@@ -26,17 +26,19 @@ const QUEEN_PHASE: i32 = 9;
 // The maximum possible phase
 const TOTAL_PHASE: i32 = PAWN_PHASE * 16 + KNIGHT_PHASE * 4 + BISHOP_PHASE * 4 + ROOK_PHASE * 4 + QUEEN_PHASE * 2;
 
+// Lazy eval margin to beta
+const LAZY_MARGIN: Eval = 250;
+
 impl Position {
 
     pub fn eval(&self, lazy_eval: bool, alpha: Eval, beta: Eval) -> Eval {
         let phase = get_phase_score(self);
         let mut eval = pst_eval(self, phase);
         if lazy_eval { // if clearly outside of a/b with margin, return only the lazy pst eval
-            let margin = 150; // 150 centipawns
-            if eval - margin >= beta {
+            if eval - LAZY_MARGIN >= beta {
                 return eval;
             }
-            if eval + margin <= alpha {
+            if eval + LAZY_MARGIN <= alpha {
                 return eval;
             }
         }
