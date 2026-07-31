@@ -26,7 +26,8 @@ pub struct TranspositionTable {
 impl TranspositionTable {
     pub fn new(size_mb: usize) -> Self {
         let entry_size = std::mem::size_of::<Option<TTEntry>>();
-        let num_entries = (size_mb * 1024 * 1024 / entry_size).next_power_of_two() / 2;
+        let raw = size_mb * 1024 * 1024 / entry_size;
+        let num_entries = if raw.is_power_of_two() { raw } else { raw.next_power_of_two() / 2 }.max(1);
         Self {
             entries: vec![None; num_entries],
             mask: num_entries - 1,
