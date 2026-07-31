@@ -27,6 +27,11 @@ impl Position {
     }
 
     #[inline]
+    pub fn get_all_pieces_of_color(&self, c: Color) -> BitBoard {
+        self.color[c.idx()]
+    }
+
+    #[inline]
     pub fn get_piece(&self, p: Piece, c: Color) -> BitBoard {
         self.pieces[p.idx()] & self.color[c.idx()]
     }

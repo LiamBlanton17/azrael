@@ -55,7 +55,7 @@ impl Position {
             self.order_moves(move_stack, tt_move, killers, &history_heuristic[self.turn.idx()]);
         }
     }
-
+    
 }
 
 // NOTE: when flag is not a promotion, ALWAYS PASS Piece::Knight as the promotion piece to avoid move packing errors!

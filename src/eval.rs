@@ -1,5 +1,8 @@
 mod pst;
 
+use crate::search::magics::bishop::get_bishop_moves;
+use crate::search::magics::rook::get_rook_moves;
+use crate::search::move_generation::KNIGHT_MOVES;
 use crate::types::bidboard::BitBoard;
 use crate::types::color::Color;
 use crate::types::eval::Eval;
@@ -47,6 +50,7 @@ impl Position {
         eval += tempo_eval(self, phase);
         eval += king_safety_eval(self, phase);
         eval += file_based_eval(self, phase);
+        eval += mobility_eval(self, phase);
 
         eval
     }
@@ -135,6 +139,142 @@ fn phase_weight(piece: Piece) -> i32 {
         Piece::Queen => QUEEN_PHASE,
         _ => 0,
     }
+}
+
+/* Mobility eval scores are from https://github.com/gabtar/aconcagua
+
+MIT License
+
+Copyright (c) 2023 Gabriel
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+const MOB_OPEN_KNIGHT: [Eval; 9] = [-142, -37, -11, 0, 12, 15, 28, 39, 53];
+const MOB_ENDG_KNIGHT: [Eval; 9] = [-78, -21, 9, 33, 44, 57, 58, 61, 54];
+const MOB_OPEN_BISHOP: [Eval; 14] = [-51, -63, -29, -19, -7, 1, 7, 12, 13, 18, 21, 37, 43, 55];
+const MOB_ENDG_BISHOP: [Eval; 14] = [-135, -56, -4, 21, 32, 38, 48, 53, 58, 58, 59, 49, 50, 37];
+const MOB_OPEN_ROOK: [Eval; 15] = [-41, -31, -8, -1, 3, 4, 5, 6, 9, 13, 16, 18, 21, 25, 29];
+const MOB_ENDG_ROOK: [Eval; 15] = [-17, 6, 30, 51, 63, 73, 80, 86, 88, 90, 93, 96, 97, 95, 91];
+const MOB_OPEN_QUEEN: [Eval; 28] = [-21, -18, -34, -52, -42, -26, -23, -21, -18, -16, -13, -9, -6, -1, 0, 0, 1, 0, 0, 2, 10, 23, 39, 54, 40, 75, 30, 16];
+const MOB_ENDG_QUEEN: [Eval; 28] = [-77, -66, -56, -74, 8, 71, 114, 138, 157, 179, 185, 190, 196, 194, 196, 199, 198, 201, 202, 197, 193, 171, 161, 141, 146, 127, 149, 147];
+
+// Knight mobility eval
+pub fn knight_mobility(p: &Position, c: Color, phase: i32, pawn_attacks: BitBoard) -> Eval {
+    let knights = p.get_piece(Piece::Knight, c);
+    let friendly = p.get_all_pieces_of_color(c);
+
+    let mut score = 0;
+    for knight in knights {
+        let moves = KNIGHT_MOVES[knight.idx()] & !friendly;
+        let safe_moves = (moves & !pawn_attacks).0.count_ones() as usize;
+        score += interpolate_phase(
+            phase, 
+            MOB_OPEN_KNIGHT[safe_moves],
+            MOB_ENDG_KNIGHT[safe_moves]
+        );
+    }
+
+    score
+}
+
+// Bishop mobility eval
+pub fn bishop_mobility(p: &Position,  c: Color, phase: i32, pawn_attacks: BitBoard) -> Eval {
+    let bishops = p.get_piece(Piece::Bishop, c);
+    let friendly = p.get_all_pieces_of_color(c);
+    let enemy = p.get_all_pieces_of_color(c.flip());
+    let occupancy = friendly | enemy;
+
+    let mut score: Eval = 0;
+    for bishop in bishops {
+        let moves = get_bishop_moves(bishop, occupancy) & !friendly;
+        let safe_moves = (moves & !pawn_attacks).0.count_ones() as usize;
+        score += interpolate_phase(
+            phase, 
+            MOB_OPEN_BISHOP[safe_moves],
+            MOB_ENDG_BISHOP[safe_moves]
+        );
+    }
+
+    score
+}
+
+// Rook mobility eval
+pub fn rook_mobility(p: &Position,  c: Color, phase: i32, pawn_attacks: BitBoard) -> Eval {
+    let rooks = p.get_piece(Piece::Rook, c);
+    let friendly = p.get_all_pieces_of_color(c);
+    let enemy = p.get_all_pieces_of_color(c.flip());
+    let occupancy = friendly | enemy;
+
+    let mut score: Eval = 0;
+    for rook in rooks {
+        let moves = get_rook_moves(rook, occupancy) & !friendly;
+        let safe_moves = (moves & !pawn_attacks).0.count_ones() as usize;
+        score += interpolate_phase(
+            phase, 
+            MOB_OPEN_ROOK[safe_moves],
+            MOB_ENDG_ROOK[safe_moves]
+        );
+    }
+
+    score
+}
+
+// Queen mobility eval
+pub fn queens_mobility(p: &Position,  c: Color, phase: i32, pawn_attacks: BitBoard) -> Eval {
+    let queens = p.get_piece(Piece::Queen, c);
+    let friendly = p.get_all_pieces_of_color(c);
+    let enemy = p.get_all_pieces_of_color(c.flip());
+    let occupancy = friendly | enemy;
+
+    let mut score: Eval = 0;
+    for queen in queens {
+        let moves = (get_rook_moves(queen, occupancy) | get_bishop_moves(queen, occupancy)) & !friendly;
+        let safe_moves = (moves & !pawn_attacks).0.count_ones() as usize;
+        score += interpolate_phase(
+            phase, 
+            MOB_OPEN_QUEEN[safe_moves],
+            MOB_ENDG_QUEEN[safe_moves]
+        );
+    }
+
+    score
+}
+
+// Calculate a mobility bonus for the position
+fn mobility_eval(p: &Position, phase: i32) -> Eval {
+    let mut score: Eval = 0;
+
+    // Do mobility score for white
+    let black_pawn_attacks = p.pawn_control_bitboard(Color::Black);
+    score += knight_mobility(p, Color::White, phase, black_pawn_attacks);
+    score += bishop_mobility(p, Color::White, phase, black_pawn_attacks);
+    score += rook_mobility(p, Color::White, phase, black_pawn_attacks);
+    score += queens_mobility(p, Color::White, phase, black_pawn_attacks);
+
+    // Do mobility score for black
+    let white_pawn_attacks = p.pawn_control_bitboard(Color::White);
+    score -= knight_mobility(p, Color::Black, phase, white_pawn_attacks);
+    score -= bishop_mobility(p, Color::Black, phase, white_pawn_attacks);
+    score -= rook_mobility(p, Color::Black, phase, white_pawn_attacks);
+    score -= queens_mobility(p, Color::Black, phase, white_pawn_attacks);
+
+    score
 }
 
 // Give a slight bonus for tempo, slight better later in game

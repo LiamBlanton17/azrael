@@ -36,6 +36,7 @@ A UCI chess engine written from scratch in Rust — bitboard move generation, an
 - Hand-tuned pawn structure, king safety, and open/semi-open file terms
 - Bishop-pair and tempo bonuses
 - Tapered evaluation across game phases, with lazy evaluation
+- Mobility evaluation based on the [Aconcagua](https://github.com/gabtar/aconcagua) chess engine
 
 **Interface**
 - Speaks the [UCI protocol](https://en.wikipedia.org/wiki/Universal_Chess_Interface) — drops into any UCI GUI or tournament runner (tested with `fastchess`)

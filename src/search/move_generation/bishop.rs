@@ -17,7 +17,7 @@ impl Position {
         let occupancy = friendly | enemy;
 
         for bishop in bishops {
-            let moves: BitBoard = get_bishop_moves(bishop, occupancy) & !friendly;
+            let moves = get_bishop_moves(bishop, occupancy) & !friendly;
             let targets = match level {
                 MoveGenLevel::All => moves,
                 MoveGenLevel::Captures => moves & enemy,

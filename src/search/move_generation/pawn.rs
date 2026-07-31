@@ -38,6 +38,22 @@ impl Position {
         attacks & sq.to_bitboard() != BitBoard(0)
     }
 
+    // Return a bitboard for squares control by a pawn
+    pub fn pawn_control_bitboard(&self, c: Color) -> BitBoard {
+        // Get the bitboards for the players pawns and all enemy pieces (plus en passant square if exists)
+        let pawns = self.get_piece(Piece::Pawn, c);
+
+        // Get the possible attacks depending on color
+        let (possible_left_attacks, possible_right_attacks) = if c == color::Color::White {
+            ((pawns & NOT_H_FILE) << 9u32, (pawns & NOT_A_FILE) << 7u32)
+        } else {
+            ((pawns & NOT_A_FILE) >> 9u32, (pawns & NOT_H_FILE) >> 7u32)
+        };
+
+        // Return the combined bitboard
+        possible_right_attacks | possible_left_attacks
+    }
+
 }
 
 const NOT_A_FILE: BitBoard = BitBoard(0xFEFEFEFEFEFEFEFE);
