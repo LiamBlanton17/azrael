@@ -33,4 +33,4 @@ jobs:
         run: cargo test --release --verbose
 
       - name: Verify move generation (perft)
-        run: cargo run --release -- perft
+        run: printf 'perft\nquit\n' | cargo run --release
