@@ -1,4 +1,5 @@
 use std::cmp::{max, min};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
 use crate::search::move_generation::{ensure_move_stack_len, MoveGenLevel};
@@ -21,6 +22,7 @@ pub struct NegamaxSearcher<'a> {
     pub q_nodes: u64,
     pub deadline: Option<Instant>,
     pub aborted: bool,
+    pub stop: &'a AtomicBool
 }
 
 #[derive(Clone, Copy)]
@@ -45,8 +47,16 @@ impl NegamaxSearcher<'_> {
 
         // check if we need to abort this search
         if self.nodes & 32767 == 0 {
+
+            // have we passed the deadline
+            // TODO: refactor to use an enum and stop either at time or node counts
             if let Some(d) = self.deadline {
                 if Instant::now() >= d { self.aborted = true; }
+            }
+
+            // have we be stopped by the calling thread (uci thread)
+            if self.stop.load(Ordering::Relaxed) {
+                self.aborted = true;
             }
         }
         if self.aborted {

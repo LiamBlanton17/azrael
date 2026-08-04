@@ -15,6 +15,8 @@ use crate::types::{chess_move::Move, position::ZobristHash};
 use crate::types::eval::{Eval, MATE, MIN_EVAL};
 use crate::types::position::Position;
 
+use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 use std::time::{Duration, Instant};
 
 #[allow(dead_code)]
@@ -23,6 +25,7 @@ pub enum RootSearchType {
     TimeLimited(Duration),
     StableDepthLimited(usize),
     DepthLimited(usize),
+    Infinite,
 }
 
 impl Position {
@@ -32,12 +35,13 @@ impl Position {
     // the current (root) position in the actual game, oldest first. It seeds the search
     // history each iteration so repetitions against already-played moves are detected.
     // Pass an empty slice when no game history is available (e.g. one-off analysis).
-    pub fn root_search(&mut self, search_type: RootSearchType, game_history: &[ZobristHash], tt: &mut TranspositionTable) -> (Eval, Move, u64, u64, usize) {
+    pub fn root_search(&mut self, search_type: RootSearchType, game_history: &[ZobristHash], tt: &mut TranspositionTable, stop: Arc<AtomicBool>) -> (Eval, Move, u64, u64, usize) {
         match search_type {
-            RootSearchType::StableTimeLimited(budget) => stable_time_search(self, budget, game_history, tt),
-            RootSearchType::StableDepthLimited(depth) => stable_depth_search(self, depth, game_history, tt),
-            RootSearchType::TimeLimited(budget) => time_search(self, budget, game_history, tt),
-            RootSearchType::DepthLimited(depth) => depth_search(self, depth, game_history, tt),
+            RootSearchType::StableTimeLimited(budget) => stable_time_search(self, budget, game_history, tt, stop),
+            RootSearchType::StableDepthLimited(depth) => stable_depth_search(self, depth, game_history, tt, stop),
+            RootSearchType::TimeLimited(budget) => time_search(self, budget, game_history, tt, stop),
+            RootSearchType::DepthLimited(depth) => depth_search(self, depth, game_history, tt, stop),
+            RootSearchType::Infinite => infinite_search(self, game_history, tt, stop),
         }
     }
 
@@ -68,7 +72,7 @@ const STABLE_ITERATION_START: usize = 12;
 const STABLE_EVAL_THRESHOLD: Eval = 10;
 const STABLE_ABF: u32 = 5;
 const DEPTH_TO_START_ASPIRATION_WINDOWS: usize = 5;
-fn stable_time_search(p: &mut Position, budget: Duration, game_history: &[ZobristHash], tt: &mut TranspositionTable) -> (Eval, Move, u64, u64, usize) {
+fn stable_time_search(p: &mut Position, budget: Duration, game_history: &[ZobristHash], tt: &mut TranspositionTable, stop: Arc<AtomicBool>) -> (Eval, Move, u64, u64, usize) {
     let mut move_stack: Vec<Vec<Move>> = (0..=TIME_SEARCH_EXPECTED_MAX_DEPTH).map(|_| Position::new_move_stack()).collect();
     let mut history: Vec<ZobristHash> = Vec::with_capacity(TIME_SEARCH_EXPECTED_MAX_DEPTH + game_history.len());
     
@@ -103,6 +107,7 @@ fn stable_time_search(p: &mut Position, budget: Duration, game_history: &[Zobris
             q_nodes: 0,
             aborted: false,
             deadline,
+            stop: &stop,
         };
 
         // negamax search to this depth
@@ -170,7 +175,7 @@ fn stable_time_search(p: &mut Position, budget: Duration, game_history: &[Zobris
 }
 
 // Main branch from root_search - do not exceed a time budget
-fn time_search(p: &mut Position, budget: Duration, game_history: &[ZobristHash], tt: &mut TranspositionTable) -> (Eval, Move, u64, u64, usize) {
+fn time_search(p: &mut Position, budget: Duration, game_history: &[ZobristHash], tt: &mut TranspositionTable, stop: Arc<AtomicBool>) -> (Eval, Move, u64, u64, usize) {
     let mut move_stack: Vec<Vec<Move>> = (0..=TIME_SEARCH_EXPECTED_MAX_DEPTH).map(|_| Position::new_move_stack()).collect();
     let mut history: Vec<ZobristHash> = Vec::with_capacity(TIME_SEARCH_EXPECTED_MAX_DEPTH + game_history.len());
     
@@ -205,6 +210,7 @@ fn time_search(p: &mut Position, budget: Duration, game_history: &[ZobristHash],
             q_nodes: 0,
             aborted: false,
             deadline,
+            stop: &stop,
         };
 
         // negamax search to this depth
@@ -261,7 +267,7 @@ fn time_search(p: &mut Position, budget: Duration, game_history: &[ZobristHash],
 
 // Main branch from root_search - go to a predefined depth
 // Allocating for depth + 16 (for quiesence search after depth reached, want to prevent reallocs)
-fn stable_depth_search(p: &mut Position, depth: usize, game_history: &[ZobristHash], tt: &mut TranspositionTable) -> (Eval, Move, u64, u64, usize) {
+fn stable_depth_search(p: &mut Position, depth: usize, game_history: &[ZobristHash], tt: &mut TranspositionTable, stop: Arc<AtomicBool>) -> (Eval, Move, u64, u64, usize) {
     let mut move_stack: Vec<Vec<Move>> = (0..=(depth + 16)).map(|_| Position::new_move_stack()).collect();
     let mut history: Vec<ZobristHash> = Vec::with_capacity(depth + 16 + game_history.len());
 
@@ -293,7 +299,7 @@ fn stable_depth_search(p: &mut Position, depth: usize, game_history: &[ZobristHa
             q_nodes: 0,
             aborted: false,
             deadline: None,
-
+            stop: &stop,
         };
 
         // negamax search to this depth
@@ -354,7 +360,7 @@ fn stable_depth_search(p: &mut Position, depth: usize, game_history: &[ZobristHa
 
 // Main branch from root_search - go to a predefined depth
 // Allocating for depth + 16 (for quiesence search after depth reached, want to prevent reallocs)
-fn depth_search(p: &mut Position, depth: usize, game_history: &[ZobristHash], tt: &mut TranspositionTable) -> (Eval, Move, u64, u64, usize) {
+fn depth_search(p: &mut Position, depth: usize, game_history: &[ZobristHash], tt: &mut TranspositionTable, stop: Arc<AtomicBool>) -> (Eval, Move, u64, u64, usize) {
     let mut move_stack: Vec<Vec<Move>> = (0..=(depth + 16)).map(|_| Position::new_move_stack()).collect();
     let mut history: Vec<ZobristHash> = Vec::with_capacity(depth + 16 + game_history.len());
 
@@ -383,6 +389,7 @@ fn depth_search(p: &mut Position, depth: usize, game_history: &[ZobristHash], tt
             q_nodes: 0,
             aborted: false,
             deadline: None,
+            stop: &stop,
         };
 
         // negamax search to this depth
@@ -425,6 +432,93 @@ fn depth_search(p: &mut Position, depth: usize, game_history: &[ZobristHash], tt
 
     (best_eval, best_move, total_nodes, total_q_nodes, depth)
 }
+
+// Main branch from root_search - go forever (uci must call "stop" to stop this search)
+// Allocating for depth 256 (todo: make it possible to go past, but simply impossible [prolly])
+fn infinite_search(p: &mut Position, game_history: &[ZobristHash], tt: &mut TranspositionTable, stop: Arc<AtomicBool>) -> (Eval, Move, u64, u64, usize) {
+    let max_depth = 256;
+    let mut move_stack: Vec<Vec<Move>> = (0..=max_depth).map(|_| Position::new_move_stack()).collect();
+    let mut history: Vec<ZobristHash> = Vec::with_capacity(max_depth + game_history.len());
+
+    let mut killers: Vec<(Move, Move)> = vec![(Move::default(), Move::default()); TIME_SEARCH_EXPECTED_MAX_DEPTH];
+    let mut history_heuristic = new_history_heuristic();
+
+    let mut best_eval = MIN_EVAL;
+    let mut best_move = 0;
+    let mut total_nodes = 0;
+    let mut total_q_nodes = 0;
+    let mut actual_depth_reached = 0;
+    for d in 0..=max_depth {
+        // reset the history to the real game history (move gen resets the move stack)
+        // so repetitions against already-played moves are detected during search
+        history.clear();
+        history.extend_from_slice(game_history);
+        age_history(&mut history_heuristic);
+
+        // setup the searcher
+        let mut searcher = NegamaxSearcher {
+            move_stack: &mut move_stack, 
+            history: &mut history, 
+            killers: &mut killers, 
+            history_heuristic: &mut history_heuristic, 
+            tt,
+            nodes: 0,
+            q_nodes: 0,
+            aborted: false,
+            deadline: None,
+            stop: &stop,
+        };
+
+        // negamax search to this depth
+        let last_search_start = Instant::now();
+        let (e, m, n, qn) = if d <= DEPTH_TO_START_ASPIRATION_WINDOWS {
+            let result = searcher.search(p, NegamaxSearchParams {
+                depth: d, 
+                ply: 0,
+                alpha: -MATE,
+                beta: MATE,
+                is_nmp_search: false,
+            });
+            (result.eval, result.best_move, searcher.nodes, searcher.q_nodes)
+        } else {
+            let mut window: i32 = 25;
+            loop {
+                let alpha = (best_eval as i32 - window).max(-(MATE as i32)) as Eval;
+                let beta  = (best_eval as i32 + window).min(  MATE as i32) as Eval;
+                let result = searcher.search(p, NegamaxSearchParams {
+                    depth: d, 
+                    ply: 0,
+                    alpha,
+                    beta,
+                    is_nmp_search: false,
+                });
+                let e = result.eval;
+                // re-search only if we failed AND still have room to widen
+                if (e <= alpha && alpha > -(MATE)) || (e >= beta && beta < MATE) {
+                    window *= 4;
+                    continue;
+                }
+                break (e, result.best_move, searcher.nodes, searcher.q_nodes);
+            }
+        };
+
+        // update nodes searched
+        actual_depth_reached = d;
+        total_nodes += n;
+        total_q_nodes += qn;
+
+        // if the search was aborted, keep the old eval/best move
+        if searcher.aborted {
+            break;
+        }
+
+        best_eval = e;
+        best_move = m;
+    }
+
+    (best_eval, best_move, total_nodes, total_q_nodes, actual_depth_reached)
+}
+
 
 // Must call this function for the engine to work
 pub fn init_engine() {

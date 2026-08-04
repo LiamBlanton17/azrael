@@ -14,7 +14,7 @@ pub const CASTLE_BK: u8 = 0b0100; // 4: Black Kingside
 pub const CASTLE_BQ: u8 = 0b1000; // 8: Black Queenside
 
 // Main structure for the board state
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone, Copy)]
 pub struct Position {
 
     // Piece bitboards

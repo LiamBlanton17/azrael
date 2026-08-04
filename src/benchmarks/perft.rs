@@ -8,7 +8,7 @@ use crate::types::position::{Position, ZobristHash};
 
 // Used by the CLI to run a perf test -- this verifies the move generation is working correctly
 // It also provides a best test of raw nodes per second the engine can do, without any other overhead than raw search
-pub fn perf_test() {
+pub fn test() {
 
     // must init the zobrist tables, the rook/bishop magic tables, and the other piece tables
     init_engine();

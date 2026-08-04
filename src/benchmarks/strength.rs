@@ -1,5 +1,7 @@
 use std::fs::{self, File};
 use std::io::{self, BufRead, BufReader};
+use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 use std::time::{Duration, Instant};
 
 use crate::search::{RootSearchType, init_engine};
@@ -81,7 +83,7 @@ fn load_test(line: &str) -> Option<BenchmarkTest> {
 // Bunch of different positions, for scores for the move determines for the position
 // Better score equals better moves found, and also will display node counts and efficiency
 // https://www.chessprogramming.org/Strategic_Test_Suite
-pub fn strength_test() {
+pub fn test() {
     // must init the zobrist tables, the rook/bishop magic tables, and the other piece tables
     init_engine();
 
@@ -168,7 +170,7 @@ pub fn strength_test() {
 
 
                 let start = Instant::now();
-                let (_eval, best_move, nodes, q_nodes, actual_depth) = test.position.root_search(RootSearchType::DepthLimited(depth), &[], &mut tt);
+                let (_eval, best_move, nodes, q_nodes, actual_depth) = test.position.root_search(RootSearchType::DepthLimited(depth), &[], &mut tt, Arc::new(AtomicBool::new(false)));
                 total_search_duration[i] += start.elapsed();
 
                 let scored = test
@@ -203,15 +205,15 @@ pub fn strength_test() {
         println!("Score: {}/{} ({:.2})", total_score[i], max_score, total_score[i] as f64 / max_score as f64);
         println!("Best moves found: {}/{} ({:.2})", best_moves_found[i], tests_run, best_moves_found[i] as f64 / tests_run as f64);
         println!("Search time: {:?}", total_search_duration[i]);
-        println!("Total nodes: {}", crate::format_with_commas(total_nodes[i]));
+        println!("Total nodes: {}", total_nodes[i]);
         let negamax_nodes = total_nodes[i] - total_q_nodes[i];
         let q_pct = if total_nodes[i] > 0 {
             100.0 * total_q_nodes[i] as f64 / total_nodes[i] as f64
         } else {
             0.0
         };
-        println!("  negamax nodes: {}", crate::format_with_commas(negamax_nodes));
-        println!("  quiescence nodes: {} ({:.1}%)", crate::format_with_commas(total_q_nodes[i]), q_pct);
+        println!("  negamax nodes: {}", negamax_nodes);
+        println!("  quiescence nodes: {} ({:.1}%)", total_q_nodes[i], q_pct);
         println!("Avg. Depth: {:.2}", (total_depth[i] as f64 / tests_run as f64));
         println!("MN/S: {:.2}", mnps);
         println!("ABF: {:.2}", (total_abf[i] / tests_run as f64));
