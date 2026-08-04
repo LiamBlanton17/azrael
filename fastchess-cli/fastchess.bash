@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-./fastchess/fastchess \
+./fastchess \
     -engine cmd=./azrael_feature.exe name=feature \
     -engine cmd=./azrael_main.exe    name=main \
     -each proto=uci tc=30+1 \

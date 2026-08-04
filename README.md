@@ -26,7 +26,7 @@ A UCI chess engine written from scratch in Rust — bitboard move generation, an
 - [Aspiration windows](https://www.chessprogramming.org/Aspiration_Windows)
 - [Static Exchange Evaluation](https://www.chessprogramming.org/Static_Exchange_Evaluation)
 - Razoring at low depths
-- Check and root depth extensions
+- Check extensions and [Late Move Reductions](https://www.chessprogramming.org/Late_Move_Reductions)
 - [Quiescence search](https://www.chessprogramming.org/Quiescence_Search) with delta pruning and check-evasion handling
 - [Transposition table](https://www.chessprogramming.org/Transposition_Table) with depth-preferred replacement
 - Move ordering: TT move, [killer moves](https://www.chessprogramming.org/Killer_Heuristic), and a [history heuristic](https://www.chessprogramming.org/History_Heuristic)
@@ -57,20 +57,24 @@ The binary is produced at `target/release/azrael`.
 
 ## Usage
 
+Azrael starts an interactive command loop that reads one command per line from stdin:
+
 ```sh
-# Run as a UCI engine (for a GUI or a tournament runner like fastchess)
-azrael uci
-
-# Find the best move in a position, limited by depth (ply) or time (ms)
-azrael search "<FEN>" depth 9
-azrael search "<FEN>" time 1000
-
-# Verify move generation and measure raw search speed
-azrael perft
-
-# Run the tactical/positional strength suite (EPD files in test_files/)
-azrael strength
+azrael
 ```
+
+| Command    | Effect                                                                            |
+|------------|------------------------------------------------------------------------------------|
+| `uci`      | Switch into [UCI protocol](https://en.wikipedia.org/wiki/Universal_Chess_Interface) mode, for a GUI or a tournament runner like `fastchess` |
+| `perft`    | Verify move generation and measure raw search speed                              |
+| `strength` | Run the tactical/positional strength suite (EPD files in `test_files/`)          |
+| `help`     | Print the command list                                                           |
+| `quit`     | Exit                                                                              |
+
+`uci` hands the process over to the UCI loop for the rest of its life (the standard `position`/`go`/`stop` commands
+are supported); `perft` and `strength` run in place and drop you back at the prompt. There's currently no one-shot
+`azrael search <FEN> ...` command for ad hoc analysis of a single position — drive it over UCI instead
+(`position fen <FEN>` then `go movetime <ms>`; depth-limited `go` isn't wired up yet, only the clock/time params are).
 
 ## Correctness (perft)
 
@@ -103,20 +107,58 @@ simplification, and more — and scores how often it finds the annotated best mo
 
 _Score is total points earned across the suite's weighted candidate moves; **Best move found** counts positions where Azrael played the top-rated move. **MN/s** is millions of nodes searched per second; **ABF** is the effective branching factor (lower means more aggressive pruning)._
 
+## SPRT testing
+
+[`fastchess-cli/`](fastchess-cli/) wraps [fastchess](https://github.com/Disservin/fastchess) (vendored here, MIT licensed) to make it easy to run an [SPRT](https://www.chessprogramming.org/Sequential_Probability_Ratio_Test) regression test — play a candidate build against a baseline over many games and get a statistical verdict on whether it's actually stronger, weaker, or a wash.
+
+To set up a run:
+
+1. **Build the two engines being compared** and drop them into `fastchess-cli/`. Most often this is two Azrael builds — a feature branch against `main` — but pitting Azrael against another UCI engine works the same way:
+
+   ```sh
+   # feature branch
+   cargo build --release
+   cp target/release/azrael fastchess-cli/azrael_feature.exe   # drop the .exe outside Windows
+
+   # baseline, e.g. main
+   git checkout main
+   cargo build --release
+   cp target/release/azrael fastchess-cli/azrael_main.exe
+   ```
+
+2. **Update [`fastchess.bash`](fastchess-cli/fastchess.bash) to match.** The `-engine cmd=... name=...` lines need to point at whatever binaries you just built (rename them, or edit the paths). While you're in there, adjust the time control (`tc=`), `-concurrency`, and the SPRT bounds (`elo0`/`elo1`/`alpha`/`beta`) for the test you're running — the checked-in values are just a starting point, not a fixed convention.
+
+3. **Download an opening book** and save it as `fastchess-cli/openings.epd` (or repoint `-openings file=` at wherever you put it). Games are seeded from this file so both engines see identical starting positions each round. [UHO_Lichess_4852_v1.epd](https://github.com/official-stockfish/books), derived from Lichess classical games, is a solid default:
+
+   ```sh
+   curl -LO https://raw.githubusercontent.com/official-stockfish/books/master/UHO_Lichess_4852_v1.epd.zip
+   unzip UHO_Lichess_4852_v1.epd.zip -d fastchess-cli
+   mv fastchess-cli/UHO_Lichess_4852_v1.epd fastchess-cli/openings.epd
+   ```
+
+4. **Run it:**
+
+   ```sh
+   cd fastchess-cli
+   ./fastchess.bash
+   ```
+
+   Results stream to the terminal and get logged to `out.pgn` / `fc.log`; `config.json` is fastchess's own state file (rewritten between runs, including on `-recover`) and generally doesn't need hand-editing.
+
+`*.exe`, `fc.log`, `out.pgn`, and `openings.epd` under `fastchess-cli/` are gitignored — only `fastchess.bash`, `config.json`, and the vendored `fastchess`/`LICENSE` are tracked.
+
 ## Design
 
-Azrael is built around a compact, cache-friendly board representation. Everything below is packed to keep the working
-set small and the hot paths allocation-free.
+Azrael is built around a compact, cache-friendly board representation, and packs what's cheap to pack — the hot
+paths stay allocation-free either way.
 
 **Board state** — the pieces are stored in two representations, kept in sync on every move:
 - **Bitboards** — 6 piece boards (K, Q, R, B, N, P) + 2 color boards (W, B), for fast set-wise operations and attack generation.
 - **Mailbox** — a 64-byte array mapping each square directly to the piece on it. This gives O(1) "what's on this square?" lookups, which are hot in the make/unmake-move routines and in move ordering — places where reading it off the bitboards would otherwise cost a scan.
 
-Alongside those sit a 64-bit Zobrist hash and a handful of packed state fields:
-- 7 bits — halfmove clock (capped at 100)
-- 4 bits — castling rights
-- 4 bits — en-passant square
-- 1 bit — side to move
+Alongside those, `Position` carries a 64-bit Zobrist hash; incremental evaluation accumulators (`pst_opening`,
+`pst_endgame`, `phase_material`) that are updated on every make/unmake so `eval` never has to rescan the board from
+scratch; the halfmove clock; castling rights; an optional en-passant square; and the side to move.
 
 The mailbox is a deliberate space-for-speed trade: it adds 64 bytes and makes the struct less cache-friendly, but the constant-time lookups it enables in the hottest paths more than pay for themselves.
 
@@ -124,7 +166,9 @@ The mailbox is a deliberate space-for-speed trade: it adds 64 bytes and makes th
 - 6 bits — from square
 - 6 bits — to square
 - 2 bits — promotion piece
-- 2 bits — move code (capture, castle, etc.)
+- 2 bits — move code (none, en passant, castle, promotion)
+
+Captures aren't a separate flag — `is_move_capture` derives them by checking the mailbox at the destination square.
 
 **Staged move generation** — generation is designed from the ground up to emit captures, quiets, or both, per piece
 type and for the position as a whole. When a capture produces a cutoff, the quiet moves are never generated at all.
@@ -137,7 +181,7 @@ type and for the position as a whole. When a capture produces a cutoff, the quie
 | `state/`      | Board state representation — FEN, Zobrist, SAN/long-algebraic parsing |
 | `search/`     | Move generation, magics, and the search stack (negamax, quiescence, TT) |
 | `eval/`       | Static position evaluation                                            |
-| `interface.rs`| UCI protocol implementation                                           |
+| `interface/`  | `interface.rs` reads stdin lines for the command loop in `main.rs`; `interface/uci.rs` implements the UCI protocol |
 | `benchmarks/` | Perft and strength-test harnesses                                    |
 
 ## License

@@ -1,3 +1,8 @@
 /target
 profile.json.gz
 *.key
+fastchess-cli/azrael_feature.exe
+fastchess-cli/azrael_main.exe
+fastchess-cli/fc.log
+fastchess-cli/out.pgn
+fastchess-cli/openings.epd
